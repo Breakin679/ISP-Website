@@ -127,7 +127,7 @@ const About = () => {
         </div>
       </section>
 
-      {/* Call to Action */}
+      {/* Call to Actiddddon */}
 
       <section className=" bg-indigo-700 text-white py-10 text-center">
         <h2 className="text-3xl md:text-4xl font-bold mb-4">
