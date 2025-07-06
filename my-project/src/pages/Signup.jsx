@@ -9,35 +9,26 @@ const Signup = () => (
         <div className="relative my-4">
           <input
             type="text"
-            className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-            placeholder=""
+            className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300"
+            placeholder="Username"
             required
           />
-          <label className="absolute text-sm duration-300 transform -translate scale-75 top-3 z-10 origin-[0] peer-focus:left-0 peer-focus:text-blue-600 peer-placeholder-shown:scale-100 peer-focus:scale-75 peer-focus:-translate-y-6">
-            Username
-          </label>
         </div>
         <div className="relative my-4">
           <input
             type="email"
-            className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-            placeholder=""
+            className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300"
+            placeholder="Email"
             required
           />
-          <label className="absolute text-sm duration-300 transform -translate scale-75 top-3 z-10 origin-[0] peer-focus:left-0 peer-focus:text-blue-600 peer-placeholder-shown:scale-100 peer-focus:scale-75 peer-focus:-translate-y-6">
-            Email
-          </label>
         </div>
         <div className="relative my-4">
           <input
             type="password"
-            className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"
-            placeholder=""
+            className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300"
+            placeholder="Password"
             required
           />
-          <label className="absolute text-sm duration-300 transform -translate scale-75 top-3 z-10 origin-[0] peer-focus:left-0 peer-focus:text-blue-600 peer-placeholder-shown:scale-100 peer-focus:scale-75 peer-focus:-translate-y-6">
-            Password
-          </label>
         </div>
         <button
           type="submit"

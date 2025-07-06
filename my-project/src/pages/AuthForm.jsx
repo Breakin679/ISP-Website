@@ -5,7 +5,7 @@ export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
-    <div className="mt-12 flex justify-center items-center min-h-[60vh]">
+    <div className="mt-24 flex justify-center items-center min-h-[60vh]">
       <motion.div
         layout
         transition={{ type: "spring", duration: 0.6 }}

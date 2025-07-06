@@ -1,5 +1,6 @@
 import React from "react";
 import Optic from "../assets/Optic.jpg";
+import { Link } from "react-router-dom";
 import { FaShieldAlt, FaUsers, FaLightbulb } from "react-icons/fa";
 
 const About = () => {
@@ -137,12 +138,12 @@ const About = () => {
           Let's get you started with the perfect internet plan for your home or
           business.
         </p>
-        <a
-          href="/contact"
+        <Link
+          to="/contact"
           className="inline-block bg-white text-indigo-700 font-semibold px-8 py-4 rounded-full shadow hover:bg-gray-100 transition"
         >
           Contact Us
-        </a>
+        </Link>
       </section>
     </main>
   );
