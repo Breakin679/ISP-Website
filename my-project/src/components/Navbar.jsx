@@ -41,17 +41,18 @@ const Navbar = () => {
         <div className="hidden md:flex items-center space-x-6 text-lg font-light">
           <Link to="/about" className="hover:text-sky-400">About</Link>
           <Link to="/contact" className="hover:text-sky-400">Contact</Link>
-
+          <Link to="/locations" className="hover:text-sky-400">Locations</Link>
+  
           {/* Subscriptions Dropdown */}
           <div className="relative" ref={subsRef}>
             <button
               onClick={() => setSubsOpen(!subsOpen)}
-              className="bg-slate-800 text-gray-400 hover:text-sky-600  p-1 rounded-md"
+              className="bg-slate-800 text-gray-400 hover:text-sky-600 p-1 rounded-md"
             >
               Subscriptions
             </button>
             {subsOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-slate-800 text-black rounded-md shadow-lg z-30">
+              <div className="absolute right-0 mt-2 w-56 bg-slate-800 text-sky-400 rounded-md shadow-lg z-30">
                 <Link
                   to="/subscriptions/fiber"
                   className="block px-4 py-2 hover:bg-gray-100"
@@ -148,6 +149,13 @@ const Navbar = () => {
           >
             Contact
           </Link>
+          <Link
+            to="/locations"
+            onClick={handleSidebarLinkClick}
+            className="hover:text-sky-400"
+          >
+            Locations
+          </Link>
 
           <div>
             <p className="text-sky-300 mb-2 font-semibold">Subscriptions</p>
@@ -180,3 +188,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
