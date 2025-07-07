@@ -4,6 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
 
+  // Helper to save user info to localStorage
+  const saveUser = (username) => {
+    localStorage.setItem("user", JSON.stringify({ username }));
+  };
+
   return (
     <div className="mt-24 flex justify-center items-center min-h-[60vh]">
       <motion.div
@@ -21,9 +26,19 @@ export default function AuthForm() {
               transition={{ duration: 0.4 }}
             >
               <h1 className="text-4xl font-bold text-center mb-6">Login</h1>
-              <form>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const username = e.target.username.value.trim();
+                  if (username) {
+                    saveUser(username);
+                    window.location.href = "/"; // redirect to home or refresh
+                  }
+                }}
+              >
                 <div className="relative my-4">
                   <input
+                    name="username"
                     type="text"
                     className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=""
@@ -70,9 +85,19 @@ export default function AuthForm() {
               transition={{ duration: 0.4 }}
             >
               <h1 className="text-4xl font-bold text-center mb-6">Sign Up</h1>
-              <form>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const username = e.target.username.value.trim();
+                  if (username) {
+                    saveUser(username);
+                    window.location.href = "/";
+                  }
+                }}
+              >
                 <div className="relative my-4">
                   <input
+                    name="username"
                     type="text"
                     className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=""

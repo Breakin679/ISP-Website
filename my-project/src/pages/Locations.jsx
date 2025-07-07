@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import RequestInstallationModel from "../components/Installation";
+import RequestInstallationModal from "../components/Installation";
 
 const Locations = () => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,7 +43,9 @@ const Locations = () => {
           <h2 className="text-2xl font-semibold mb-4">{type} Locations</h2>
           <ul className="list-disc list-inside text-gray-600 mb-4">
             {locData[type].map((loc, i) => (
-              <li key={i} className="italic text-gray-400">{loc}</li>
+              <li key={i} className="italic text-gray-400">
+                {loc}
+              </li>
             ))}
           </ul>
           <button
@@ -55,7 +57,7 @@ const Locations = () => {
         </section>
       ))}
 
-      <RequestInstallationModel
+      <RequestInstallationModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         installType={installType}

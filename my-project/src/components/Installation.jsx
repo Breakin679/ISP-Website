@@ -4,8 +4,8 @@ export default function RequestInstallationModal({
   isOpen,
   onClose,
   installType,
-  locData = {},                // now an object map
-  subsOptions = {},            // now an object map
+  locData = {}, // now an object map
+  subsOptions = {}, // now an object map
   onSubmit,
 }) {
   const [form, setForm] = useState({
@@ -19,7 +19,7 @@ export default function RequestInstallationModal({
     if (isOpen) {
       setForm({ location: "", subscription: "", contact: "" });
     }
-  }, [isOpen, installType]);  // ≤ only these two
+  }, [isOpen, installType]); // ≤ only these two
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,26 +47,26 @@ export default function RequestInstallationModal({
           onSubmit={handleSend}
           className="bg-slate-700 rounded-lg shadow-lg w-full max-w-md p-6"
         >
-          <h3 className="text-xl font-semibold mb-4">
+          <h3 className="text-xl text-white font-semibold mb-4">
             {installType} Installation
           </h3>
 
           {/* Type (read-only) */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-white">
               Type of Install
             </label>
             <input
               type="text"
               value={installType}
               readOnly
-              className="mt-1 w-full px-3 py-2 border rounded bg-slate-700"
+              className="mt-1 text-white w-full px-3 py-2 border rounded bg-slate-700"
             />
           </div>
 
           {/* Location */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-white">
               Location
             </label>
             <select
@@ -74,7 +74,7 @@ export default function RequestInstallationModal({
               value={form.location}
               onChange={handleChange}
               required
-              className="mt-1 w-full px-3 py-2 border rounded"
+              className="mt-1 text-white w-full px-3 py-2 border rounded"
             >
               <option value="">Select a location</option>
               {(locData[installType] || []).map((loc, idx) => (
@@ -87,7 +87,7 @@ export default function RequestInstallationModal({
 
           {/* Subscription */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-white">
               Subscription
             </label>
             <select
@@ -95,7 +95,7 @@ export default function RequestInstallationModal({
               value={form.subscription}
               onChange={handleChange}
               required
-              className="mt-1 w-full px-3 py-2 border rounded"
+              className="mt-1 text-white w-full px-3 py-2 border rounded"
             >
               <option value="">Select a plan</option>
               {(subsOptions[installType] || []).map((plan, idx) => (
@@ -117,7 +117,7 @@ export default function RequestInstallationModal({
               value={form.contact}
               onChange={handleChange}
               required
-              className="mt-1 w-full px-3 py-2 border rounded"
+              className="text-white mt-1 w-full px-3 py-2 border rounded"
             />
           </div>
 

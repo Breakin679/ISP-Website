@@ -29,6 +29,16 @@ const Navbar = () => {
     setSidebarOpen(false);
   };
 
+  // Get user from localStorage
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user"));
+    } catch {
+      return null;
+    }
+  })();
+  const isLoggedIn = !!user;
+
   return (
     <>
       <nav className="bg-slate-800 text-sky-400 p-4 flex items-center justify-between fixed top-0 left-0 w-full z-50 shadow-md">
@@ -39,10 +49,16 @@ const Navbar = () => {
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center space-x-6 text-lg font-light">
-          <Link to="/about" className="hover:text-sky-400">About</Link>
-          <Link to="/contact" className="hover:text-sky-400">Contact</Link>
-          <Link to="/locations" className="hover:text-sky-400">Locations</Link>
-  
+          <Link to="/about" className="hover:text-sky-400">
+            About
+          </Link>
+          <Link to="/contact" className="hover:text-sky-400">
+            Contact
+          </Link>
+          <Link to="/locations" className="hover:text-sky-400">
+            Locations
+          </Link>
+
           {/* Subscriptions Dropdown */}
           <div className="relative" ref={subsRef}>
             <button
@@ -90,21 +106,44 @@ const Navbar = () => {
               <FaUser className="w-6 h-6" />
             </button>
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-40 bg-slate-800 text-sky-400 rounded-md shadow-lg z-30">
-                <Link
-                  to="/login"
-                  className="block px-4 py-2 hover:bg-gray-100"
-                  onClick={() => setProfileOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/signup"
-                  className="block px-4 py-2 hover:bg-gray-100"
-                  onClick={() => setProfileOpen(false)}
-                >
-                  Sign Up
-                </Link>
+              <div className="absolute right-0 mt-2 w-48 bg-slate-800 text-sky-400 rounded-md shadow-lg z-30 p-2">
+                {isLoggedIn ? (
+                  <>
+                    <div className="px-4 py-2 border-b border-sky-700 mb-2">
+                      <div className="font-semibold text-indigo-300">
+                        {user.username}
+                      </div>
+                      <div className="text-xs text-sky-300">Logged in</div>
+                    </div>
+                    <button
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                      onClick={() => {
+                        localStorage.removeItem("user");
+                        setProfileOpen(false);
+                        window.location.reload();
+                      }}
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      to="/signup"
+                      className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -188,4 +227,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-

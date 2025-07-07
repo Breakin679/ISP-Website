@@ -1,7 +1,126 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import RequestInstallationModal from "../components/Installation";
+import ReviewForm from "../components/ReviewForm";
 
 const Home = () => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [installType, setInstallType] = useState("");
+  const [form, setForm] = useState({
+    location: "",
+    subscription: "",
+    contact: "",
+  });
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviews, setReviews] = useState([
+    {
+      name: "Sarah K.",
+      review: "The best internet provider I've ever had! Reliable and fast.",
+    },
+    {
+      name: "Mike D.",
+      review: "Great customer service and affordable plans. Highly recommend.",
+    },
+    {
+      name: "Lina M.",
+      review:
+        "Fiber network is super fast and stable. Perfect for my business.",
+    },
+  ]);
+  const [currentReview, setCurrentReview] = useState(0);
+
+  // Define placeholder locations and subscription options
+  const locData = {
+    Residential: ["----", "----", "----"],
+    Corporate: ["----", "----", "----"],
+    Fiber: ["Beirut"],
+  };
+  const subsOptions = {
+    Residential: ["Basic Plan", "Standard Plan", "Premium Plan"],
+    Corporate: ["Corporate Plan A", "Corporate Plan B"],
+    Fiber: ["Fiber 500", "Fiber 1G", "Fiber 2G"],
+  };
+
+  // Open modal and preset type
+  const openModal = (type) => {
+    setInstallType(type);
+    setForm({ location: "", subscription: "", contact: "" });
+    setModalOpen(true);
+  };
+
+  // Handle form submission
+  const handleSubmit = (data) => {
+    console.log(data);
+    setModalOpen(false);
+    alert("Installation request sent!");
+  };
+
+  // Plans array with type property for correct modal opening
+  const plans = [
+    {
+      title: "Fiber Plan",
+      type: "Fiber",
+      price: "Starting $40 / month",
+      features: ["Up to 100 Mbps", "Unlimited Data", "24/7 Support"],
+    },
+    {
+      title: "Residential Plan",
+      type: "Residential",
+      price: "Starting $20 / month",
+      features: ["Up to 30 Mbps", "Unlimited Data", "24/7 Support"],
+    },
+    {
+      title: "Corporate Plan",
+      type: "Corporate",
+      price: "Starting $60 / month",
+      features: ["Up to 50 Mbps", "Unlimited Data", "Priority Support"],
+    },
+  ];
+
+  // Get user from localStorage
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user"));
+    } catch {
+      return null;
+    }
+  })();
+  const isLoggedIn = !!user;
+
+  const handleAddReview = (review) => {
+    setReviews((prev) => [...prev, review]);
+    setShowReviewForm(false);
+    setCurrentReview(reviews.length); // Go to the new review
+  };
+
+  const handleScroll = (dir) => {
+    setCurrentReview((prev) => {
+      if (dir === "left") return prev > 0 ? prev - 1 : reviews.length - 1;
+      if (dir === "right") return prev < reviews.length - 1 ? prev + 1 : 0;
+      return prev;
+    });
+  };
+
+  // Helper to get 3 reviews for carousel
+  const getThreeReviews = () => {
+    const total = reviews.length;
+    if (total === 0) return [];
+    if (total === 1) return [reviews[0]];
+    if (total === 2) {
+      // Duplicate to fill 3 slots
+      return [
+        reviews[(currentReview - 1 + total) % total],
+        reviews[currentReview],
+        reviews[(currentReview + 1) % total],
+      ];
+    }
+    return [
+      reviews[(currentReview - 1 + total) % total],
+      reviews[currentReview],
+      reviews[(currentReview + 1) % total],
+    ];
+  };
+
   return (
     <main className="pt-14  bg-white text-gray-900">
       <div className="mx-auto">
@@ -78,27 +197,7 @@ const Home = () => {
         <section id="plans" className="w-full py-16 px-4 text-center">
           <h2 className="text-3xl font-bold mb-10">Plans & Pricing</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Basic Plan",
-                price: "$24.99 / month",
-                features: ["Up to 15 Mbps", "Unlimited Data", "24/7 Support"],
-              },
-              {
-                title: "Standard Plan",
-                price: "$34.99 / month",
-                features: ["Up to 20 Mbps", "Unlimited Data", "24/7 Support"],
-              },
-              {
-                title: "Premium Plan",
-                price: "$44.99 / month",
-                features: [
-                  "Up to 25 Mbps",
-                  "Unlimited Data",
-                  "Priority Support",
-                ],
-              },
-            ].map((plan, idx) => (
+            {plans.map((plan, idx) => (
               <div
                 key={idx}
                 className="p-6 border rounded shadow hover:shadow-lg transition"
@@ -110,7 +209,10 @@ const Home = () => {
                     <li key={i}>{f}</li>
                   ))}
                 </ul>
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
+                <button
+                  onClick={() => openModal(plan.type)}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+                >
                   Choose Plan
                 </button>
               </div>
@@ -124,34 +226,71 @@ const Home = () => {
         {/* Testimonials */}
         <section
           id="testimonials"
-          className="w-full bg-gray-100 py-16 px-4 text-center"
+          className="w-full bg-gray-50 py-16 px-4 text-center"
         >
-          <h2 className="text-3xl font-bold mb-10">What Our Customers Say</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                quote:
-                  "The best internet provider I've ever had! Reliable and fast.",
-                name: "- Sarah K.",
-              },
-              {
-                quote:
-                  "Great customer service and affordable plans. Highly recommend.",
-                name: "- Mike D.",
-              },
-              {
-                quote:
-                  "Fiber network is super fast and stable. Perfect for my business.",
-                name: "- Lina M.",
-              },
-            ].map((testimonial, i) => (
-              <blockquote key={i} className="p-6 border rounded shadow italic">
-                "{testimonial.quote}"
-                <footer className="mt-4 font-semibold">
-                  {testimonial.name}
-                </footer>
-              </blockquote>
-            ))}
+          <div className="max-w-7xl mx-auto text-center mb-12">
+            <h2 className="text-3xl font-bold">What Our Customers Say</h2>
+          </div>
+          <div className="flex items-center justify-center w-full max-w-[98vw] xl:max-w-[1400px] mx-auto gap-0 relative">
+            <button
+              aria-label="Previous review"
+              className="absolute left-0 z-10 bg-indigo-200 text-indigo-700 rounded-full w-12 h-12 md:w-14 md:h-14 flex items-center justify-center hover:bg-indigo-300 top-1/2 -translate-y-1/2 ml-2 md:ml-8 xl:ml-16"
+              onClick={() => handleScroll("left")}
+              style={{ left: 0 }}
+            >
+              &#8592;
+            </button>
+            <div className="flex flex-1 justify-center items-center w-full gap-2 md:gap-6 lg:gap-10">
+              {getThreeReviews().map((r, idx) => (
+                <div
+                  key={idx}
+                  className={`bg-white p-4 md:p-8 rounded-xl shadow-md hover:shadow-lg transition flex flex-col justify-between h-full min-w-0 flex-1 mx-1 md:mx-4 ${
+                    idx === 1
+                      ? "scale-105 md:scale-110 z-10 max-w-xs md:max-w-3xl min-w-[180px] md:min-w-[400px] border-indigo-400 shadow-lg text-base md:text-lg py-6 md:py-12 px-4 md:px-10 border"
+                      : "opacity-70 scale-95 text-sm md:text-base max-w-[120px] md:max-w-lg min-w-[100px] md:min-w-[250px] py-4 md:py-8 px-2 md:px-6"
+                  }`}
+                >
+                  <p className="text-gray-700 italic mb-4">“{r.review || r.comment}”</p>
+                  <div className="text-right font-semibold text-gray-900">
+                    — {r.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              aria-label="Next review"
+              className="absolute right-0 z-10 bg-indigo-200 text-indigo-700 rounded-full w-12 h-12 md:w-14 md:h-14 flex items-center justify-center hover:bg-indigo-300 top-1/2 -translate-y-1/2 mr-2 md:mr-8 xl:mr-16"
+              onClick={() => handleScroll("right")}
+              style={{ right: 0 }}
+            >
+              &#8594;
+            </button>
+          </div>
+          <div className="mt-8">
+            <button
+              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+              onClick={() => {
+                if (isLoggedIn) {
+                  setShowReviewForm(true);
+                } else {
+                  alert("You need to be logged in to add a review.");
+                }
+              }}
+            >
+              Add Review
+            </button>
+            {showReviewForm && (
+              <ReviewForm
+                onSubmit={(review) =>
+                  handleAddReview({
+                    ...review,
+                    name: user?.username || review.name,
+                    rating: review.rating || 5,
+                  })
+                }
+                onClose={() => setShowReviewForm(false)}
+              />
+            )}
           </div>
         </section>
 
@@ -193,6 +332,14 @@ const Home = () => {
           </Link>
         </section>
       </div>
+      <RequestInstallationModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        installType={installType}
+        locations={locData[installType] || []}
+        subscriptionOptions={subsOptions[installType] || []}
+        onSubmit={handleSubmit}
+      />
     </main>
   );
 };
