@@ -14,7 +14,7 @@ const ReviewForm = ({ onSubmit, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-8 shadow-2xl w-full max-w-lg relative animate-fade-in">
         {/* Close Button */}
         <button

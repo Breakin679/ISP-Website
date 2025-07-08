@@ -115,6 +115,25 @@ const Navbar = () => {
                       </div>
                       <div className="text-xs text-sky-300">Logged in</div>
                     </div>
+                    <div className="px-4 py-2 border-b border-sky-700 mb-2">
+                      <Link
+                        to="/status"
+                        className="font-semibold text-indigo-300"
+                        onClick={() => setProfileOpen(!profileOpen)}
+                      >
+                        Status
+                      </Link>
+                    </div>
+                    <div className="px-4 py-2 border-b border-sky-700 mb-2">
+                      <Link
+                        to="/profile/subscription"
+                        className="font-semibold text-indigo-300"
+                        onClick={() => setProfileOpen(false)}
+                      >
+                        Manage Subscription
+                      </Link>
+                    </div>
+
                     <button
                       className="block w-full text-left px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
                       onClick={() => {

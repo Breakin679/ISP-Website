@@ -9,6 +9,11 @@ import Corporate from "./pages/Subscriptions/Corporate";
 import Full from "./pages/full";
 import Locations from "./pages/Locations";
 import AuthForm from "./pages/AuthForm";
+import Status from "./pages/Status";
+import ManageSubscription from "./pages/ManageSubscription";
+{
+  /*import PrivateRoute from "./components/PrivateRoute";*/
+}
 
 function App() {
   return (
@@ -31,6 +36,7 @@ function App() {
             </div>
           }
         />
+
         <Route
           path="login"
           element={
@@ -56,6 +62,11 @@ function App() {
         <Route path="subscriptions/fiber" element={<Fiber />} />
         <Route path="subscriptions/residential" element={<Residential />} />
         <Route path="subscriptions/corporate" element={<Corporate />} />
+
+        <Route path="status" element={<Status />} />
+
+        <Route path="profile/subscription" element={<ManageSubscription />} />
+        {/* fallback / 404… */}
       </Route>
     </Routes>
   );
