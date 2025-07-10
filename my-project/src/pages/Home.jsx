@@ -29,7 +29,6 @@ const Home = () => {
   ]);
   const [currentReview, setCurrentReview] = useState(0);
 
-  // Define placeholder locations and subscription options
   const locData = {
     Residential: ["----", "----", "----"],
     Corporate: ["----", "----", "----"],
@@ -41,7 +40,6 @@ const Home = () => {
     Fiber: ["Fiber 500", "Fiber 1G", "Fiber 2G"],
   };
 
-  // Open modal and preset type
   const openModal = (type) => {
     setInstallType(type);
     setForm({ location: "", subscription: "", contact: "" });
@@ -180,7 +178,7 @@ const Home = () => {
             </div>
             <div>
               <h3 className="text-xl font-semibold mb-2">Speed</h3>
-              <p>Fast speeds up to 1 Gbps for all your needs.</p>
+              <p>Fast speeds up to 300 Mbps for all your needs.</p>
             </div>
             <div>
               <h3 className="text-xl font-semibold mb-2">Support</h3>
@@ -250,7 +248,9 @@ const Home = () => {
                       : "opacity-70 scale-95 text-sm md:text-base max-w-[120px] md:max-w-lg min-w-[100px] md:min-w-[250px] py-4 md:py-8 px-2 md:px-6"
                   }`}
                 >
-                  <p className="text-gray-700 italic mb-4">“{r.review || r.comment}”</p>
+                  <p className="text-gray-700 italic mb-4">
+                    “{r.review || r.comment}”
+                  </p>
                   <div className="text-right font-semibold text-gray-900">
                     — {r.name}
                   </div>
