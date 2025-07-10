@@ -29,7 +29,6 @@ const Home = () => {
   ]);
   const [currentReview, setCurrentReview] = useState(0);
 
-  // Define placeholder locations and subscription options
   const locData = {
     Residential: ["----", "----", "----"],
     Corporate: ["----", "----", "----"],
@@ -41,7 +40,6 @@ const Home = () => {
     Fiber: ["Fiber 500", "Fiber 1G", "Fiber 2G"],
   };
 
-  // Open modal and preset type
   const openModal = (type) => {
     setInstallType(type);
     setForm({ location: "", subscription: "", contact: "" });
