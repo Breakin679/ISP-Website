@@ -56,22 +56,23 @@ export default function ManageSubscription() {
   }
 
   return (
-    <main className="pt-24 px-4 bg-white min-h-screen">
+    <main className="bg-gradient-to-r from-blue-600 to-indigo-700 pt-24 px-4 bg-white min-h-screen">
       <div className="max-w-xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-center">
           Manage Subscription
         </h1>
 
         {/* Current Plan */}
-        <div className="bg-gray-100 p-6 rounded-lg shadow mb-8 text-center">
+        <div className="bg-indigo-400 p-6 rounded-lg shadow mb-8 text-center">
           <p className="mb-2">Your current plan:</p>
           <div className="font-semibold text-xl">{current.title}</div>
-          <div className="text-gray-600">{current.price} / month</div>
+          <div className="text-white">{current.price} / month</div>
         </div>
 
         {/* Change Plan Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block font-medium">Select a new plan:</label>
+        <form onSubmit={handleSubmit} className=" space-y-4">
+          <div className="bg-indigo-400">
+          <label className="block font-medium text-white">Select a new plan:</label>
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
@@ -83,6 +84,7 @@ export default function ManageSubscription() {
               </option>
             ))}
           </select>
+          </div>
 
           <button
             type="submit"

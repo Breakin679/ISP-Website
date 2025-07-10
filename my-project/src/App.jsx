@@ -11,6 +11,7 @@ import Locations from "./pages/Locations";
 import AuthForm from "./pages/AuthForm";
 import Status from "./pages/Status";
 import ManageSubscription from "./pages/ManageSubscription";
+import ContactImg from "./assets/Contact_img.jpg";
 {
   /*import PrivateRoute from "./components/PrivateRoute";*/
 }
@@ -26,13 +27,14 @@ function App() {
           path="contact"
           element={
             <div
-              className="flex justify-center items-center w-[100%] h-[100vh] bg-cover"
+              className="w-full min-h-screen flex justify-center items-center"
               style={{
-                backgroundImage: "url('../src/assets/Contact_img.jpg')",
+                backgroundImage: `url(${ContactImg})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
               }}
             >
-              {" "}
-              <Contact />{" "}
+              <Contact />
             </div>
           }
         />

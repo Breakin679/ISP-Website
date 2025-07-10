@@ -19,7 +19,7 @@ export default function Status() {
         </h1>
 
         {/* Summary Cards */}
-        <div className="bg-gray-100 p-6 rounded-lg shadow mb-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="bg-gray-300 p-6 rounded-lg shadow mb-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Client Connection */}
           <div className="text-center">
             <p className="text-lg">Client Connection</p>
@@ -47,7 +47,7 @@ export default function Status() {
         {/* Detailed Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* Signal Strength */}
-          <div className="bg-white p-6 rounded-lg shadow text-center">
+          <div className="bg-gray-300 p-6 rounded-lg shadow text-center">
             <p className="font-medium mb-2">Signal Strength</p>
             <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
               <div
@@ -59,19 +59,19 @@ export default function Status() {
           </div>
 
           {/* Latency */}
-          <div className="bg-white p-6 rounded-lg shadow text-center">
+          <div className="bg-gray-300 p-6 rounded-lg shadow text-center">
             <p className="font-medium mb-2">Latency (Ping)</p>
             <p className="text-3xl font-semibold">{latencyMs} ms</p>
           </div>
 
           {/* Download Speed */}
-          <div className="bg-white p-6 rounded-lg shadow text-center">
+          <div className="bg-gray-300 p-6 rounded-lg shadow text-center">
             <p className="font-medium mb-2">Download Speed</p>
             <p className="text-3xl font-semibold">{downloadMbps} Mbps</p>
           </div>
 
           {/* Upload Speed */}
-          <div className="bg-white p-6 rounded-lg shadow text-center">
+          <div className="bg-gray-300 p-6 rounded-lg shadow text-center">
             <p className="font-medium mb-2">Upload Speed</p>
             <p className="text-3xl font-semibold">{uploadMbps} Mbps</p>
           </div>
