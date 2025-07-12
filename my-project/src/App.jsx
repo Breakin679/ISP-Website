@@ -11,7 +11,6 @@ import Locations from "./pages/Locations";
 import AuthForm from "./pages/AuthForm";
 import Status from "./pages/Status";
 import ManageSubscription from "./pages/ManageSubscription";
-import ContactImg from "./assets/Contact_img.jpg";
 {
   /*import PrivateRoute from "./components/PrivateRoute";*/
 }
@@ -69,6 +68,47 @@ function App() {
         <Route path="status" element={<Status />} />
 
         <Route path="profile/subscription" element={<ManageSubscription />} />
+        <Route
+          path="admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/users"
+          element={
+            <AdminRoute>
+              <ManageUsers />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/plans"
+          element={
+            <AdminRoute>
+              <ManagePlans />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/installs"
+          element={
+            <AdminRoute>
+              <InstallRequests />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/servers"
+          element={
+            <AdminRoute>
+              <ManageServers />
+            </AdminRoute>
+          }
+        />
+
         {/* fallback / 404… */}
       </Route>
     </Routes>

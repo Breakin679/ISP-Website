@@ -25,29 +25,26 @@ const Navbar = () => {
   }, []);
 
   // Close sidebar when a link is clicked
-  const handleSidebarLinkClick = () => {
-    setSidebarOpen(false);
-  };
+  const handleSidebarLinkClick = () => setSidebarOpen(false);
 
-  // Get user from localStorage
-  const user = (() => {
+  // Get user and role
+  const user = React.useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem("user"));
     } catch {
       return null;
     }
-  })();
-  const isLoggedIn = !!user;
+  }, []);
+  const role = localStorage.getItem("role");
+  const isLoggedIn = Boolean(user);
+  const isAdmin = role === "admin";
 
   return (
     <>
       <nav className="bg-slate-800 text-sky-400 p-4 flex items-center justify-between fixed top-0 left-0 w-full z-50 shadow-md">
-        {/* Logo */}
         <div className="text-2xl font-bold">
           <Link to="/home">MyISP</Link>
         </div>
-
-        {/* Desktop Links */}
         <div className="hidden md:flex items-center space-x-6 text-lg font-light">
           <Link to="/about" className="hover:text-sky-400">
             About
@@ -58,8 +55,6 @@ const Navbar = () => {
           <Link to="/locations" className="hover:text-sky-400">
             Locations
           </Link>
-
-          {/* Subscriptions Dropdown */}
           <div className="relative" ref={subsRef}>
             <button
               onClick={() => setSubsOpen(!subsOpen)}
@@ -71,22 +66,22 @@ const Navbar = () => {
               <div className="absolute right-0 mt-2 w-56 bg-slate-800 text-sky-400 rounded-md shadow-lg z-30">
                 <Link
                   to="/subscriptions/fiber"
-                  className="block px-4 py-2 hover:bg-gray-100"
                   onClick={() => setSubsOpen(false)}
+                  className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800"
                 >
                   Fiber Network
                 </Link>
                 <Link
                   to="/subscriptions/residential"
-                  className="block px-4 py-2 hover:bg-gray-100"
                   onClick={() => setSubsOpen(false)}
+                  className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800"
                 >
                   Residential
                 </Link>
                 <Link
                   to="/subscriptions/corporate"
-                  className="block px-4 py-2 hover:bg-gray-100"
                   onClick={() => setSubsOpen(false)}
+                  className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800"
                 >
                   Corporate
                 </Link>
@@ -94,10 +89,7 @@ const Navbar = () => {
             )}
           </div>
         </div>
-
-        {/* Right side buttons */}
         <div className="flex items-center space-x-4">
-          {/* Profile Icon */}
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => setProfileOpen(!profileOpen)}
@@ -106,38 +98,78 @@ const Navbar = () => {
               <FaUser className="w-6 h-6" />
             </button>
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-slate-800 text-sky-400 rounded-md shadow-lg z-30 p-2">
+              <div className="absolute right-0 mt-2 w-56 bg-slate-800 text-sky-400 rounded-md shadow-lg z-30 p-2">
                 {isLoggedIn ? (
                   <>
                     <div className="px-4 py-2 border-b border-sky-700 mb-2">
                       <div className="font-semibold text-indigo-300">
                         {user.username}
                       </div>
-                      <div className="text-xs text-sky-300">Logged in</div>
+                      <div className="text-xs text-sky-300">
+                        {isAdmin ? "Admin" : "Logged in"}
+                      </div>
                     </div>
-                    <div className="px-4 py-2 border-b border-sky-700 mb-2">
-                      <Link
-                        to="/status"
-                        className="font-semibold text-indigo-300"
-                        onClick={() => setProfileOpen(!profileOpen)}
-                      >
-                        Status
-                      </Link>
-                    </div>
-                    <div className="px-4 py-2 border-b border-sky-700 mb-2">
-                      <Link
-                        to="/profile/subscription"
-                        className="font-semibold text-indigo-300"
-                        onClick={() => setProfileOpen(false)}
-                      >
-                        Manage Subscription
-                      </Link>
-                    </div>
-
+                    {isAdmin ? (
+                      <>
+                        <Link
+                          to="/admin"
+                          className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                        <Link
+                          to="/admin/users"
+                          className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          Manage Users
+                        </Link>
+                        <Link
+                          to="/admin/plans"
+                          className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          Manage Plans
+                        </Link>
+                        <Link
+                          to="/admin/installs"
+                          className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          Install Requests
+                        </Link>
+                        <Link
+                          to="/admin/servers"
+                          className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          Servers
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          to="/status"
+                          className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          Status
+                        </Link>
+                        <Link
+                          to="/profile/subscription"
+                          className="block px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
+                          onClick={() => setProfileOpen(false)}
+                        >
+                          Manage Subscription
+                        </Link>
+                      </>
+                    )}
                     <button
                       className="block w-full text-left px-4 py-2 hover:bg-gray-100 hover:text-slate-800 rounded"
                       onClick={() => {
                         localStorage.removeItem("user");
+                        localStorage.removeItem("role");
                         setProfileOpen(false);
                         window.location.reload();
                       }}
@@ -166,8 +198,6 @@ const Navbar = () => {
               </div>
             )}
           </div>
-
-          {/* Hamburger Toggle (Mobile Only) */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="md:hidden text-white text-2xl"
@@ -177,16 +207,12 @@ const Navbar = () => {
           </button>
         </div>
       </nav>
-
-      {/* Sidebar Overlay */}
       <div
         className={`fixed inset-0 bg-black bg-opacity-40 z-40 transition-opacity duration-300 ${
           sidebarOpen ? "opacity-50 visible" : "opacity-0 invisible"
         }`}
         onClick={() => setSidebarOpen(false)}
       />
-
-      {/* Sidebar Panel */}
       <aside
         className={`fixed top-0 left-0 h-full w-64 bg-slate-800 text-white z-50 transform transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -214,31 +240,62 @@ const Navbar = () => {
           >
             Locations
           </Link>
-
-          <div>
-            <p className="text-sky-300 mb-2 font-semibold">Subscriptions</p>
-            <Link
-              to="/subscriptions/fiber"
-              onClick={handleSidebarLinkClick}
-              className="block pl-4 hover:text-sky-400 mb-1"
-            >
-              Fiber Network
-            </Link>
-            <Link
-              to="/subscriptions/residential"
-              onClick={handleSidebarLinkClick}
-              className="block pl-4 hover:text-sky-400 mb-1"
-            >
-              Residential
-            </Link>
-            <Link
-              to="/subscriptions/corporate"
-              onClick={handleSidebarLinkClick}
-              className="block pl-4 hover:text-sky-400"
-            >
-              Corporate
-            </Link>
-          </div>
+          {isAdmin ? (
+            <>
+              <Link
+                to="/admin"
+                onClick={handleSidebarLinkClick}
+                className="hover:text-sky-400"
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/admin/users"
+                onClick={handleSidebarLinkClick}
+                className="hover:text-sky-400"
+              >
+                Manage Users
+              </Link>
+              <Link
+                to="/admin/plans"
+                onClick={handleSidebarLinkClick}
+                className="hover:text-sky-400"
+              >
+                Manage Plans
+              </Link>
+              <Link
+                to="/admin/installs"
+                onClick={handleSidebarLinkClick}
+                className="hover:text-sky-400"
+              >
+                Install Requests
+              </Link>
+              <Link
+                to="/admin/servers"
+                onClick={handleSidebarLinkClick}
+                className="hover:text-sky-400"
+              >
+                Servers
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/status"
+                onClick={handleSidebarLinkClick}
+                className="hover:text-sky-400"
+              >
+                Status
+              </Link>
+              <Link
+                to="/profile/subscription"
+                onClick={handleSidebarLinkClick}
+                className="hover:text-sky-400"
+              >
+                Manage Subscription
+              </Link>
+            </>
+          )}
         </nav>
       </aside>
     </>
