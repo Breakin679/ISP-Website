@@ -11,6 +11,13 @@ import Locations from "./pages/Locations";
 import AuthForm from "./pages/AuthForm";
 import Status from "./pages/Status";
 import ManageSubscription from "./pages/ManageSubscription";
+import ContactImg from "./assets/Contact_img.jpg";
+import AdminRoute from "./components/AdminRoute";
+import AdminDashboard from "./pages/AdminDashboard";
+import ManageUsers from "./pages/admin/ManageUsers";
+import ManagePlans from "./pages/admin/ManagePlans";
+import InstallRequests from "./pages/admin/InstallRequests";
+import ManageServers from "./pages/admin/ServerCheck";
 {
   /*import PrivateRoute from "./components/PrivateRoute";*/
 }
