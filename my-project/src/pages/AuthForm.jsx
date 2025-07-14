@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "react-router-dom";
 
 export default function AuthForm() {
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  // determine initial form based on path
+  const initialLogin = location.pathname === "/login";
+  const [isLogin, setIsLogin] = useState(initialLogin);
 
-  const saveUser = (username, role) => {
-    localStorage.setItem("user", JSON.stringify({ username }));
-    localStorage.setItem("role", role);
+  const saveUser = (data) => {
+    localStorage.setItem("user", JSON.stringify(data));
   };
 
   return (
@@ -16,7 +19,7 @@ export default function AuthForm() {
         transition={{ type: "spring", duration: 0.6 }}
         className="bg-slate-800/30 border border-slate-600 rounded-md p-8 shadow-lg backdrop-filter backdrop-blur-lg relative w-[350px] max-w-full"
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
           {isLogin ? (
             <motion.div
               key="login"
@@ -31,34 +34,37 @@ export default function AuthForm() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  const username = e.target.username.value.trim();
+                  const email = e.target.email.value.trim();
                   const password = e.target.password.value;
-                  if (!username || !password) return;
+                  if (!email || !password) return;
 
-                  // Admin login logic
-                  if (username === "admin" && password === "admin1234") {
-                    saveUser(username, "admin");
+                  if (
+                    email === "admin@example.com" &&
+                    password === "admin1234"
+                  ) {
+                    saveUser({ email, role: "admin" });
                     window.location.href = "/admin";
                     return;
                   }
 
-                  // Normal login
-                  saveUser(username, "customer");
+                  saveUser({ email, role: "customer" });
                   window.location.href = "/";
                 }}
               >
+                {/* Email Field */}
                 <div className="relative my-4">
                   <input
-                    name="username"
-                    type="text"
+                    name="email"
+                    type="email"
                     className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform top-3 origin-[0] peer-focus:left-0 peer-focus:text-blue-600 peer-placeholder-shown:scale-100 peer-focus:scale-75 peer-focus:-translate-y-6">
-                    Username
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                    Email
                   </label>
                 </div>
+                {/* Password Field */}
                 <div className="relative my-4">
                   <input
                     name="password"
@@ -67,7 +73,7 @@ export default function AuthForm() {
                     placeholder=" "
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform top-3 origin-[0] peer-focus:left-0 peer-focus:text-blue-600 peer-placeholder-shown:scale-100 peer-focus:scale-75 peer-focus:-translate-y-6">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
                     Password
                   </label>
                 </div>
@@ -102,47 +108,106 @@ export default function AuthForm() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  const username = e.target.username.value.trim();
-                  if (username) {
-                    saveUser(username, "customer");
-                    window.location.href = "/";
-                  }
+                  const firstName = e.target.firstName.value.trim();
+                  const lastName = e.target.lastName.value.trim();
+                  const email = e.target.email.value.trim();
+                  const phone = e.target.phone.value.trim();
+                  const password = e.target.password.value;
+                  const confirm = e.target.confirm.value;
+                  if (
+                    !firstName ||
+                    !lastName ||
+                    !email ||
+                    !password ||
+                    password !== confirm
+                  )
+                    return;
+
+                  saveUser({
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    role: "customer",
+                  });
+                  window.location.href = "/";
                 }}
               >
+                {/* First Name */}
                 <div className="relative my-4">
                   <input
-                    name="username"
+                    name="firstName"
                     type="text"
                     className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform top-3 origin-[0] peer-focus:left-0 peer-focus:text-blue-600 peer-placeholder-shown:scale-100 peer-focus:scale-75 peer-focus:-translate-y-6">
-                    Username
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                    First Name
                   </label>
                 </div>
+                {/* Last Name */}
+                <div className="relative my-4">
+                  <input
+                    name="lastName"
+                    type="text"
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+                    placeholder=" "
+                    required
+                  />
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                    Last Name
+                  </label>
+                </div>
+                {/* Email */}
                 <div className="relative my-4">
                   <input
                     name="email"
                     type="email"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent.border-0 border-b-2:border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
                     required
                   />
-                  <label className="absolute text-sm text-white.duration-300 transform top-3 origin-[0] peer-focus:left-0 peer-focus:text-blue-600 peer-placeholder-shown:scale-100 peer-focus:scale-75 peer-focus:-translate-y-6">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
                     Email
                   </label>
                 </div>
+                {/* Phone */}
+                <div className="relative my-4">
+                  <input
+                    name="phone"
+                    type="tel"
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+                    placeholder=" "
+                  />
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                    Phone (optional)
+                  </label>
+                </div>
+                {/* Password */}
                 <div className="relative my-4">
                   <input
                     name="password"
                     type="password"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent.border-0 border-b-2:border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
                     required
                   />
-                  <label className="absolute text-sm text-white.duration-300 transform top-3 origin-[0] peer-focus:left-0 peer-focus:text-blue-600 peer-placeholder-shown:scale-100 peer-focus:scale-75 peer-focus:-translate-y-6">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
                     Password
+                  </label>
+                </div>
+                {/* Confirm Password */}
+                <div className="relative my-4">
+                  <input
+                    name="confirm"
+                    type="password"
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+                    placeholder=" "
+                    required
+                  />
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                    Confirm Password
                   </label>
                 </div>
                 <button
