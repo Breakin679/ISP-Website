@@ -11,6 +11,6 @@ namespace ISP.Models
         public int users_id { get; set; }
         public int plan_id { get; set; }
         public DateTime date { get; set; }
-        public decimal consumption { get; set; }
+        public int consumption { get; set; }
     }
 }

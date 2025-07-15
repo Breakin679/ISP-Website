@@ -15,6 +15,6 @@ namespace ISP.Models
         public required string fn { get; set; }
         public required string ln { get; set; }
         public bool deleted { get; set; }
-        public string? status { get; set; }
+        public int status { get; set; }
     }
 }

@@ -1,16 +1,18 @@
 ﻿using Dapper.Contrib.Extensions;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ISP.Models
 {
-    [Table("Coverage")]
+    [Dapper.Contrib.Extensions.Table("Coverage")]
     public class Coverage
     {
         [Key]
         public int id { get; set; }
-        public string? name { get; set; }
+        public required string name { get; set; }
+
+        [ForeignKey("PlanType")]
         public int plan_type_id { get; set; }
-        public string? location { get; set; }
-        public string? ContactInfo { get; set; }
-        public string? Status { get; set; }
+        public required string location { get; set; }
+        public bool Status { get; set; }
     }
 }
