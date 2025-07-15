@@ -1,93 +1,149 @@
 // src/pages/Status.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
+import {
+  FaWifi,
+  FaServer,
+  FaTachometerAlt,
+  FaDownload,
+  FaUpload,
+  FaSyncAlt,
+} from "react-icons/fa";
 
 export default function Status() {
-  // TODO: replace these hardcoded values with real data from your API
-  const isOnline = true;
-  const serverStatus = "up"; // or "down"
-  const signalStrength = 82; // 0–100 (%)
-  const latencyMs = 23; // in ms
-  const downloadMbps = 150; // in Mbps
-  const uploadMbps = 20; // in Mbps
-  const lastChecked = new Date().toISOString();
+  // TODO: replace with real API calls
+  const [status, setStatus] = useState({
+    isOnline: true,
+    serverStatus: "up",
+    signalStrength: 82,
+    latencyMs: 23,
+    downloadMbps: 150,
+    uploadMbps: 20,
+    lastChecked: new Date().toISOString(),
+  });
+  const [loading, setLoading] = useState(false);
+
+  const fetchStatus = async () => {
+    setLoading(true);
+    // TODO: fetch from your status endpoint here
+    await new Promise((r) => setTimeout(r, 500));
+    setStatus((s) => ({
+      ...s,
+      lastChecked: new Date().toISOString(),
+    }));
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  const {
+    isOnline,
+    serverStatus,
+    signalStrength,
+    latencyMs,
+    downloadMbps,
+    uploadMbps,
+    lastChecked,
+  } = status;
 
   return (
-    <main className="pt-24 px-4 bg-white min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center">
-          Connection Status
-        </h1>
+    <main className="min-h-screen bg-gray-50 pt-24 px-4">
+      <div className="max-w-5xl mx-auto">
+        <header className="flex flex-col sm:flex-row items-center justify-between mb-8">
+          <h1 className="text-4xl font-bold text-gray-800">
+            Connection Status
+          </h1>
+          <button
+            onClick={fetchStatus}
+            disabled={loading}
+            className="mt-4 sm:mt-0 flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+          >
+            <FaSyncAlt className="animate-spin-fast" />
+            <span>{loading ? "Refreshing…" : "Refresh Status"}</span>
+          </button>
+        </header>
 
         {/* Summary Cards */}
-        <div className="bg-gray-300 p-6 rounded-lg shadow mb-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Client Connection */}
-          <div className="text-center">
-            <p className="text-lg">Client Connection</p>
-            <p
-              className={`text-2xl font-semibold ${
-                isOnline ? "text-green-600" : "text-red-600"
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow flex items-center space-x-4">
+            <FaWifi
+              className={`w-8 h-8 ${
+                isOnline ? "text-green-500" : "text-red-500"
               }`}
-            >
-              {isOnline ? "Online" : "Offline"}
-            </p>
+            />
+            <div>
+              <p className="text-lg text-gray-600">Client Connection</p>
+              <p
+                className={`text-2xl font-semibold ${
+                  isOnline ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {isOnline ? "Online" : "Offline"}
+              </p>
+            </div>
           </div>
-          {/* Server Health */}
-          <div className="text-center">
-            <p className="text-lg">Server Health</p>
-            <p
-              className={`text-2xl font-semibold ${
-                serverStatus === "up" ? "text-green-600" : "text-red-600"
+          <div className="bg-white p-6 rounded-lg shadow flex items-center space-x-4">
+            <FaServer
+              className={`w-8 h-8 ${
+                serverStatus === "up" ? "text-green-500" : "text-red-500"
               }`}
-            >
-              {serverStatus === "up" ? "Operational" : "Issue Detected"}
-            </p>
+            />
+            <div>
+              <p className="text-lg text-gray-600">Server Health</p>
+              <p
+                className={`text-2xl font-semibold ${
+                  serverStatus === "up" ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {serverStatus === "up" ? "Operational" : "Issue Detected"}
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Detailed Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {/* Signal Strength */}
-          <div className="bg-gray-300 p-6 rounded-lg shadow text-center">
-            <p className="font-medium mb-2">Signal Strength</p>
-            <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+          <div className="bg-white p-6 rounded-lg shadow text-center">
+            <FaTachometerAlt className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+            <p className="font-medium text-gray-700 mb-2">Signal Strength</p>
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
               <div
-                className="bg-indigo-600 h-4 rounded-full"
+                className="bg-indigo-600 h-3 rounded-full"
                 style={{ width: `${signalStrength}%` }}
               />
             </div>
-            <p>{signalStrength}%</p>
+            <p className="text-gray-600">{signalStrength}%</p>
           </div>
 
-          {/* Latency */}
-          <div className="bg-gray-300 p-6 rounded-lg shadow text-center">
-            <p className="font-medium mb-2">Latency (Ping)</p>
-            <p className="text-3xl font-semibold">{latencyMs} ms</p>
+          <div className="bg-white p-6 rounded-lg shadow text-center">
+            <FaSyncAlt className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+            <p className="font-medium text-gray-700 mb-2">Latency (Ping)</p>
+            <p className="text-3xl font-semibold text-gray-800">
+              {latencyMs} ms
+            </p>
           </div>
 
-          {/* Download Speed */}
-          <div className="bg-gray-300 p-6 rounded-lg shadow text-center">
-            <p className="font-medium mb-2">Download Speed</p>
-            <p className="text-3xl font-semibold">{downloadMbps} Mbps</p>
+          <div className="bg-white p-6 rounded-lg shadow text-center">
+            <FaDownload className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+            <p className="font-medium text-gray-700 mb-2">Download Speed</p>
+            <p className="text-3xl font-semibold text-gray-800">
+              {downloadMbps} Mbps
+            </p>
           </div>
 
-          {/* Upload Speed */}
-          <div className="bg-gray-300 p-6 rounded-lg shadow text-center">
-            <p className="font-medium mb-2">Upload Speed</p>
-            <p className="text-3xl font-semibold">{uploadMbps} Mbps</p>
+          <div className="bg-white p-6 rounded-lg shadow text-center">
+            <FaUpload className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+            <p className="font-medium text-gray-700 mb-2">Upload Speed</p>
+            <p className="text-3xl font-semibold text-gray-800">
+              {uploadMbps} Mbps
+            </p>
           </div>
         </div>
 
-        {/* Last Checked */}
-        <p className="text-sm text-center text-gray-500">
+        <footer className="text-center text-sm text-gray-500">
           Last checked: {new Date(lastChecked).toLocaleString()}
-        </p>
-
-        {/* TODO: Add a Refresh button that re-fetches the status */}
-        {/* <div className="text-center mt-4">
-             <button className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
-               Refresh Status
-             </button>
-           </div> */}
+        </footer>
       </div>
     </main>
   );

@@ -12,6 +12,17 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+@keyframes spin-fast {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-fast {
+  animation: spin-fast 2.2s linear infinite;
+}
 
 a {
   font-weight: 500;
@@ -40,7 +51,7 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
- 
+
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -60,6 +71,5 @@ button:focus-visible {
   a:hover {
     color: #747bff;
   }
- 
 }
-@import 'tailwindcss';
+@import "tailwindcss";
