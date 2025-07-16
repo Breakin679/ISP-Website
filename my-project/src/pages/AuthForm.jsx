@@ -4,12 +4,99 @@ import { useLocation } from "react-router-dom";
 
 export default function AuthForm() {
   const location = useLocation();
-  // determine initial form based on path
   const initialLogin = location.pathname === "/login";
   const [isLogin, setIsLogin] = useState(initialLogin);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const saveUser = (data) => {
     localStorage.setItem("user", JSON.stringify(data));
+    localStorage.setItem("role", data.role);
+  };
+
+  // Adjust this if your API is hosted elsewhere
+  const API_BASE = "https://localhost:44325";
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const email = e.target.email.value.trim();
+    const password = e.target.password.value;
+    if (!email || !password) {
+      setError("Both fields are required.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        throw new Error("Invalid credentials");
+      }
+      const user = await res.json();
+      saveUser(user);
+      window.location.href = user.role === "admin" ? "/admin" : "/";
+    } catch (err) {
+      setError("Login failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const form = new FormData(e.target);
+    const payload = {
+      firstName: form.get("firstName").trim(),
+      lastName: form.get("lastName").trim(),
+      email: form.get("email").trim(),
+      phone: form.get("phone").trim(),
+      password: form.get("password"),
+    };
+
+    if (
+      !payload.firstName ||
+      !payload.lastName ||
+      !payload.email ||
+      !payload.password
+    ) {
+      setError("Please fill all required fields.");
+      setLoading(false);
+      return;
+    }
+    if (payload.password !== form.get("confirm")) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.status !== 201) {
+        const text = await res.text();
+        throw new Error(text || `Status ${res.status}`);
+      }
+      const newUser = await res.json();
+      saveUser(newUser);
+      window.location.href = "/";
+    } catch (err) {
+      setError("Signup failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -17,7 +104,7 @@ export default function AuthForm() {
       <motion.div
         layout
         transition={{ type: "spring", duration: 0.6 }}
-        className="bg-slate-800/30 border border-slate-600 rounded-md p-8 shadow-lg backdrop-filter backdrop-blur-lg relative w-[350px] max-w-full"
+        className="bg-slate-800/30 border border-slate-600 rounded-md p-8 shadow-lg backdrop-filter backdrop-blur-lg w-[350px] max-w-full"
       >
         <AnimatePresence mode="wait" initial={false}>
           {isLogin ? (
@@ -31,64 +118,50 @@ export default function AuthForm() {
               <h1 className="text-4xl font-bold text-center mb-6 text-white">
                 Login
               </h1>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const email = e.target.email.value.trim();
-                  const password = e.target.password.value;
-                  if (!email || !password) return;
-
-                  if (
-                    email === "admin@example.com" &&
-                    password === "admin1234"
-                  ) {
-                    saveUser({ email, role: "admin" });
-                    window.location.href = "/admin";
-                    return;
-                  }
-
-                  saveUser({ email, role: "customer" });
-                  window.location.href = "/";
-                }}
-              >
-                {/* Email Field */}
+              <form onSubmit={handleLogin}>
+                {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
                 <div className="relative my-4">
                   <input
                     name="email"
                     type="email"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
+                    disabled={loading}
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:border-blue-600 peer"
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:translate-y-0 peer-focus:-translate-y-6 peer-focus:scale-75">
                     Email
                   </label>
                 </div>
-                {/* Password Field */}
                 <div className="relative my-4">
                   <input
                     name="password"
                     type="password"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
+                    disabled={loading}
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:border-blue-600 peer"
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:translate-y-0 peer-focus:-translate-y-6 peer-focus:scale-75">
                     Password
                   </label>
                 </div>
                 <button
                   type="submit"
-                  className="w-full mt-6 mb-4 text-[18px] rounded bg-blue-500 py-2 hover:bg-blue-600 transition-colors duration-300"
+                  disabled={loading}
+                  className="w-full mt-6 mb-4 text-[18px] rounded bg-blue-500 py-2 hover:bg-blue-600 transition-colors duration-300 disabled:opacity-50"
                 >
-                  Login
+                  {loading ? "Logging in…" : "Login"}
                 </button>
               </form>
               <div className="text-center mt-2 text-sm text-white">
-                Don't have an account?{" "}
+                Don’t have an account?{" "}
                 <button
                   className="text-blue-400 hover:underline"
-                  onClick={() => setIsLogin(false)}
+                  onClick={() => {
+                    setError("");
+                    setIsLogin(false);
+                  }}
                 >
                   Sign Up
                 </button>
@@ -105,123 +178,101 @@ export default function AuthForm() {
               <h1 className="text-4xl font-bold text-center mb-6 text-white">
                 Sign Up
               </h1>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const firstName = e.target.firstName.value.trim();
-                  const lastName = e.target.lastName.value.trim();
-                  const email = e.target.email.value.trim();
-                  const phone = e.target.phone.value.trim();
-                  const password = e.target.password.value;
-                  const confirm = e.target.confirm.value;
-                  if (
-                    !firstName ||
-                    !lastName ||
-                    !email ||
-                    !password ||
-                    password !== confirm
-                  )
-                    return;
-
-                  saveUser({
-                    firstName,
-                    lastName,
-                    email,
-                    phone,
-                    role: "customer",
-                  });
-                  window.location.href = "/";
-                }}
-              >
-                {/* First Name */}
+              <form onSubmit={handleSignup}>
+                {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
                 <div className="relative my-4">
                   <input
                     name="firstName"
                     type="text"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
+                    disabled={loading}
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:border-blue-600 peer"
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:translate-y-0 peer-focus:-translate-y-6 peer-focus:scale-75">
                     First Name
                   </label>
                 </div>
-                {/* Last Name */}
                 <div className="relative my-4">
                   <input
                     name="lastName"
                     type="text"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
+                    disabled={loading}
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:border-blue-600 peer"
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:translate-y-0 peer-focus:-translate-y-6 peer-focus:scale-75">
                     Last Name
                   </label>
                 </div>
-                {/* Email */}
                 <div className="relative my-4">
                   <input
                     name="email"
                     type="email"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
+                    disabled={loading}
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:border-blue-600 peer"
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:translate-y-0 peer-focus:-translate-y-6 peer-focus:scale-75">
                     Email
                   </label>
                 </div>
-                {/* Phone */}
                 <div className="relative my-4">
                   <input
                     name="phone"
                     type="tel"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
+                    disabled={loading}
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:border-blue-600 peer"
                   />
-                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:translate-y-0 peer-focus:-translate-y-6 peer-focus:scale-75">
                     Phone (optional)
                   </label>
                 </div>
-                {/* Password */}
                 <div className="relative my-4">
                   <input
                     name="password"
                     type="password"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
+                    disabled={loading}
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:border-blue-600 peer"
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:translate-y-0 peer-focus:-translate-y-6 peer-focus:scale-75">
                     Password
                   </label>
                 </div>
-                {/* Confirm Password */}
                 <div className="relative my-4">
                   <input
                     name="confirm"
                     type="password"
-                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
                     placeholder=" "
+                    disabled={loading}
+                    className="block w-72 py-2.5 px-0 text-sm text-white bg-transparent border-0 border-b-2 border-gray-300 focus:outline-none focus:border-blue-600 peer"
                     required
                   />
-                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3 origin-[0] peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 peer-focus:text-blue-600">
+                  <label className="absolute text-sm text-white duration-300 transform -translate-y-6 scale-75 top-3">
                     Confirm Password
                   </label>
                 </div>
                 <button
                   type="submit"
-                  className="w-full mt-6 mb-4 text-[18px] rounded bg-blue-500 py-2 hover:bg-blue-600 transition-colors duration-300"
+                  disabled={loading}
+                  className="w-full mt-6 mb-4 text-[18px] rounded bg-blue-500 py-2 hover:bg-blue-600 transition-colors duration-300 disabled:opacity-50"
                 >
-                  Sign Up
+                  {loading ? "Signing up…" : "Sign Up"}
                 </button>
               </form>
               <div className="text-center mt-2 text-sm text-white">
                 Already have an account?{" "}
                 <button
                   className="text-blue-400 hover:underline"
-                  onClick={() => setIsLogin(true)}
+                  onClick={() => {
+                    setError("");
+                    setIsLogin(true);
+                  }}
                 >
                   Login
                 </button>
