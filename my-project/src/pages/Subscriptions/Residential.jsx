@@ -1,44 +1,18 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaWifi, FaTv, FaGamepad } from "react-icons/fa";
 import RequestInstallationModal from "../../components/Installation";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
-const plans = [
-  {
-    title: "Starter",
-    price: "$19.99/mo",
-    speed: "10 Mbps",
-    features: ["Unlimited Data", "Free Installation"],
-  },
-  {
-    title: "Everyday",
-    price: "$29.99/mo",
-    speed: "15 Mbps",
-    features: ["Unlimited Data", "Free Router Rental"],
-  },
-  {
-    title: "Ultimate",
-    price: "$49.99/mo",
-    speed: "25 Mbps",
-    features: ["Unlimited Data", "Priority Support"],
-  },
-  {
-    title: "Pro Gamer",
-    price: "$59.99/mo",
-    speed: "50 Mbps",
-    features: ["Unlimited Data", "Low Latency"],
-  },
-  {
-    title: "Family",
-    price: "$79.99/mo",
-    speed: "100 Mbps",
-    features: ["Unlimited Data", "Multiple Devices"],
-  },
-  // ...more plans
-];
-
 export default function Residential({ locData = {}, subsOptions = {} }) {
+  const scrollToPlans = () => {
+    const section = document.getElementById("Residential Plans");
+    if (section)
+      section.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
   const [page, setPage] = useState(0);
+  const [plans, setPlans] = useState([]); // fetched plans
+  const [loading, setLoading] = useState(true); // loading flag
+  const [error, setError] = useState(null); // error message
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
 
@@ -48,6 +22,22 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
     page * itemsPerPage,
     page * itemsPerPage + itemsPerPage
   );
+  useEffect(() => {
+    async function loadplans(params) {
+      try {
+        const resp = await fetch("https://localhost:44325/plans/type/2");
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        setPlans(data);
+      } catch (err) {
+        console.error("Failed to load plans:", err);
+        setError("Unable to load plans. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadplans();
+  }, []);
 
   const openModal = (type) => {
     setInstallType(type);
@@ -58,6 +48,20 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
     console.log("Installation requested:", data);
     setIsModalOpen(false);
   };
+  if (loading) {
+    return (
+      <main className="pt-24 text-center">
+        <p>Loading plans…</p>
+      </main>
+    );
+  }
+  if (error) {
+    return (
+      <main className="pt-24 text-center">
+        <p className="text-red-500">{error}</p>
+      </main>
+    );
+  }
 
   return (
     <>
@@ -72,7 +76,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
             and browse without limits.
           </p>
           <button
-            onClick={() => openModal("Residential")}
+            onClick={() => scrollToPlans()}
             className="bg-white text-teal-600 font-semibold px-8 py-3 rounded-md shadow hover:bg-gray-100 transition"
           >
             View Plans
@@ -115,7 +119,10 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
         </section>
 
         {/* Plans & Pricing with pagination */}
-        <section className="bg-gray-50 py-16 px-4 relative">
+        <section
+          id="Residential Plans"
+          className="bg-gray-50 py-16 px-4 relative"
+        >
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
             Choose Your Plan
           </h2>
@@ -130,18 +137,20 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-1">
               {currentPlans.map((plan) => (
                 <div
-                  key={plan.title}
+                  key={plan.id}
                   className="p-6 bg-white rounded-lg shadow hover:shadow-xl transition"
                 >
                   <h3 className="text-2xl font-semibold mb-2 text-center">
-                    {plan.title}
+                    {plan.name}
                   </h3>
                   <p className="text-4xl font-bold text-center mb-4">
-                    {plan.price}
+                    ${plan.price}/month
                   </p>
-                  <p className="text-center text-gray-600 mb-4">{plan.speed}</p>
+                  <p className="text-center text-gray-600 mb-4">
+                    {plan.bandwidth}Mbps
+                  </p>
                   <ul className="mb-6 space-y-2">
-                    {plan.features.map((f, idx) => (
+                    {plan.perks?.map((f, idx) => (
                       <li key={idx} className="flex items-center">
                         <span className="w-2 h-2 bg-teal-600 rounded-full mr-2" />
                         {f}

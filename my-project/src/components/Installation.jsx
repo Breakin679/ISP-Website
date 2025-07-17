@@ -4,22 +4,70 @@ export default function RequestInstallationModal({
   isOpen,
   onClose,
   installType,
-  locData = {}, // now an object map
-  subsOptions = {}, // now an object map
   onSubmit,
 }) {
+  // form state
   const [form, setForm] = useState({
     location: "",
     subscription: "",
     contact: "",
   });
 
-  // Reset form when modal opens or installType changes
+  // options pulled from backend
+  const [locOptions, setLocOptions] = useState([]);
+  const [planOptions, setPlanOptions] = useState([]);
+
+  // loading / error
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // map installType string to plan_type_id
+  const typeMap = {
+    Fiber: 1,
+    Residential: 2,
+    Corporate: 3,
+  };
+  const typeId = typeMap[installType];
+
+  // Reset form & fetch options when modal opens or installType changes
   useEffect(() => {
-    if (isOpen) {
-      setForm({ location: "", subscription: "", contact: "" });
+    if (!isOpen) return;
+    setForm({ location: "", subscription: "", contact: "" });
+    setLoading(true);
+    setError("");
+    setLocOptions([]);
+    setPlanOptions([]);
+
+    // 1️⃣ fetch coverage locations
+    // 2️⃣ fetch plans of that type
+    async function loadOptions() {
+      try {
+        // fetch all coverage, then filter by plan_type_id
+        const covResp = await fetch(
+          `https://localhost:44325/coverage/type/${typeId}`
+        );
+        if (!covResp.ok) throw new Error(`Coverage HTTP ${covResp.status}`);
+        const locList = await covResp.json();
+        setLocOptions(locList.map((c) => c.location));
+
+        // fetch plans for this type
+        const planResp = await fetch(
+          `https://localhost:44325/plans/type/${typeId}`
+        );
+        if (!planResp.ok) throw new Error(`Plans HTTP ${planResp.status}`);
+        const plans = await planResp.json();
+        // map to whatever display string you need, here plan.name
+        setPlanOptions(plans.map((p) => p.name));
+      } catch (err) {
+        console.error("Failed to load options:", err);
+        setError("Unable to load form options. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [isOpen, installType]); // ≤ only these two
+
+    loadOptions();
+  }, [isOpen, installType, typeId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,6 +96,11 @@ export default function RequestInstallationModal({
             {installType} Installation
           </h3>
 
+          {loading && (
+            <p className="text-center text-white mb-4">Loading options…</p>
+          )}
+          {error && <p className="text-center text-red-400 mb-4">{error}</p>}
+
           {/* Type (read-only) */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-white">
@@ -71,10 +124,11 @@ export default function RequestInstallationModal({
               value={form.location}
               onChange={handleChange}
               required
+              disabled={loading || !!error}
               className="mt-1 text-white w-full px-3 py-2 border rounded"
             >
               <option value="">Select a location</option>
-              {(locData[installType] || []).map((loc, idx) => (
+              {locOptions.map((loc, idx) => (
                 <option key={idx} value={loc}>
                   {loc}
                 </option>
@@ -92,10 +146,11 @@ export default function RequestInstallationModal({
               value={form.subscription}
               onChange={handleChange}
               required
+              disabled={loading || !!error}
               className="mt-1 text-white w-full px-3 py-2 border rounded"
             >
               <option value="">Select a plan</option>
-              {(subsOptions[installType] || []).map((plan, idx) => (
+              {planOptions.map((plan, idx) => (
                 <option key={idx} value={plan}>
                   {plan}
                 </option>
@@ -129,7 +184,8 @@ export default function RequestInstallationModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+              disabled={loading || !!error}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition disabled:opacity-50"
             >
               Send
             </button>

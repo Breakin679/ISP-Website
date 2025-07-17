@@ -1,44 +1,22 @@
-import React from "react";
-import { FaRocket, FaLock, FaHeadset } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import {
+  FaRocket,
+  FaLock,
+  FaHeadset,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 import RequestInstallationModal from "../../components/Installation";
-import { useState } from "react";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-
-const plans = [
-  {
-    title: "Fiber Basic",
-    speed: "20 Mbps",
-    price: "- $/mo",
-    perks: ["100 GB Monthly Quota", "Free Router Rental"],
-  },
-  {
-    title: "Fiber Plus",
-    speed: "50 Mbps",
-    price: "- $/mo",
-    perks: ["300 GB Monthly Quota", "Priority Support"],
-  },
-  {
-    title: "Fiber Max",
-    speed: "100 Mbps",
-    price: "- $/mo",
-    perks: ["600 GB Monthly Quota", "Unlimited Night Traffic"],
-  },
-  {
-    title: "Fiber Ultra",
-    speed: "200 Mbps",
-    price: "- $/mo",
-    perks: ["Unlimited Data", "Dedicated Support"],
-  },
-  {
-    title: "Fiber Pro",
-    speed: "500 Mbps",
-    price: "- $/mo",
-    perks: ["5 TB Monthly Quota", "Free Installation"],
-  },
-  // ...more plans from database
-];
 
 export default function Fiber({ locData = {}, subsOptions = {} }) {
+  const scrollToPlans = () => {
+    const section = document.getElementById("plansSection");
+    if (section)
+      section.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+  const [plans, setPlans] = useState([]); // fetched plans
+  const [loading, setLoading] = useState(true); // loading flag
+  const [error, setError] = useState(null); // error message
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
   const [page, setPage] = useState(0);
@@ -50,19 +28,49 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
     page * itemsPerPage + itemsPerPage
   );
 
+  // 2️⃣ Fetch on mount
+  useEffect(() => {
+    async function loadPlans() {
+      try {
+        const resp = await fetch("https://localhost:44325/plans/type/1");
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        setPlans(data);
+      } catch (err) {
+        console.error("Failed to load plans:", err);
+        setError("Unable to load plans. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPlans();
+  }, []);
+
   const openModal = (type) => {
     setInstallType(type);
     setIsModalOpen(true);
   };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
-
+  const closeModal = () => setIsModalOpen(false);
   const handleSubmit = (data) => {
     console.log("Installation requested:", data);
     setIsModalOpen(false);
   };
+
+  // 3️⃣ Render
+  if (loading) {
+    return (
+      <main className="pt-24 text-center">
+        <p>Loading plans…</p>
+      </main>
+    );
+  }
+  if (error) {
+    return (
+      <main className="pt-24 text-center text-red-600">
+        <p>{error}</p>
+      </main>
+    );
+  }
 
   return (
     <>
@@ -77,7 +85,7 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
             speeds and local support.
           </p>
           <button
-            onClick={() => openModal("Fiber")}
+            onClick={() => scrollToPlans()}
             className="bg-white text-pink-600 font-semibold px-8 py-3 rounded-md shadow hover:bg-gray-100 transition"
           >
             Explore Plans
@@ -117,7 +125,7 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
         </section>
 
         {/* Plan Showcase with pagination */}
-        <section className="bg-gray-50 py-16 px-4 relative">
+        <section id="plansSection" className="bg-gray-50 py-16 px-4 relative">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
             Fiber Plans
           </h2>
@@ -129,21 +137,25 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
             >
               <FaChevronLeft />
             </button>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-1">
               {currentPlans.map((plan) => (
                 <div
-                  key={plan.title}
+                  key={plan.id} // use the backend ID
                   className="p-6 bg-white rounded-lg shadow hover:shadow-xl transition"
                 >
                   <h3 className="text-2xl font-semibold mb-2 text-center">
-                    {plan.title}
+                    {plan.name}
                   </h3>
                   <p className="text-4xl font-bold text-center mb-4">
-                    {plan.price}
+                    ${plan.price}/mo
                   </p>
-                  <p className="text-center text-gray-600 mb-4">{plan.speed}</p>
+                  <p className="text-center text-gray-600 mb-4">
+                    {plan.bandwidth} Mbps
+                  </p>
                   <ul className="mb-6 space-y-2">
-                    {plan.perks.map((perk, idx) => (
+                    {/* adapt perks if your API returns them */}
+                    {plan.perks?.map((perk, idx) => (
                       <li key={idx} className="flex items-center">
                         <span className="w-2 h-2 bg-pink-600 rounded-full mr-2" />
                         {perk}
@@ -151,7 +163,7 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
                     ))}
                   </ul>
                   <button
-                    onClick={() => openModal(plan.title)}
+                    onClick={() => openModal("Fiber")}
                     className="w-full bg-pink-600 text-white py-2 rounded-md font-semibold hover:bg-pink-700 transition"
                   >
                     Select Plan
@@ -159,6 +171,7 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
                 </div>
               ))}
             </div>
+
             <button
               onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
               disabled={page === totalPages - 1}
@@ -211,7 +224,6 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
         </section>
       </main>
 
-      {/* Installation Modal */}
       <RequestInstallationModal
         isOpen={isModalOpen}
         onClose={closeModal}

@@ -14,7 +14,6 @@ export default function AuthForm() {
     localStorage.setItem("role", data.role);
   };
 
-  // Adjust this if your API is hosted elsewhere
   const API_BASE = "https://localhost:44325";
 
   const handleLogin = async (e) => {
