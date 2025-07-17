@@ -6,6 +6,19 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+// 1. Add CORS services
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+    {
+        policy
+          .WithOrigins("*")   // your React app URL
+          .AllowAnyHeader()
+          .AllowAnyMethod();
+    });
+});
 // 1) Add controllers
 builder.Services.AddControllers();
 
@@ -27,6 +40,13 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+
+app.UseRouting();
+
+// IMPORTANT: UseCors before any endpoints
+
+
+
 // 4) Configure middleware – **no environment check**, so always enabled
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -40,5 +60,6 @@ app.UseSwaggerUI(c =>
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+app.UseCors(MyAllowSpecificOrigins);
 
 app.Run();
