@@ -14,6 +14,15 @@ public class CoverageController : ControllerBase
     [HttpGet("{id:int}")]
     public ActionResult<Coverage> Get(int id)
         => _repo.GetById(id) is Coverage c ? Ok(c) : NotFound();
+    [HttpGet("type/{planTypeId:int}")] public ActionResult<IEnumerable<Coverage>> GetByType(int planTypeId)
+    {
+        if (  planTypeId<1 || planTypeId>3) return BadRequest("type doesnt exist");
+        var list = _repo
+         .GetAll()
+         .Where(c => c.plan_type_id == planTypeId)
+         .ToList();
+        return Ok(list); 
+    }
 
     [HttpPost]
     public ActionResult<long> Create(Coverage cov)

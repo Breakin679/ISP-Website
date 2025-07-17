@@ -10,5 +10,6 @@ namespace ISP.DataAccess.Interfaces
         long Insert(T entity);
         bool Update(T entity);
         bool Delete(int id);
+        
     }
 }
