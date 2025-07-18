@@ -11,6 +11,40 @@ public class CoverageController : ControllerBase
     public CoverageController(IRepository<Coverage> repo) => _repo = repo;
 
     [HttpGet] public ActionResult<IEnumerable<Coverage>> GetAll() => Ok(_repo.GetAll());
+    [HttpGet("locations")]
+    public ActionResult GetAllLocations()
+    {
+        // 1️⃣ Fetch once
+        var all = _repo.GetAll();
+
+        // 2️⃣ Group & project to location strings
+        var residential = all
+            .Where(c => c.plan_type_id == 2)
+            .Select(c => c.location)
+            .Distinct()
+            .ToList();
+
+        var fiber = all
+            .Where(c => c.plan_type_id == 1)
+            .Select(c => c.location)
+            .Distinct()
+            .ToList();
+
+        var corporate = all
+            .Where(c => c.plan_type_id == 3)
+            .Select(c => c.location)
+            .Distinct()
+            .ToList();
+
+        // 3️⃣ Return a named JSON object
+        return Ok(new
+        {
+            Residential = residential,
+            Fiber = fiber,
+            Corporate = corporate
+        });
+    }
+
     [HttpGet("{id:int}")]
     public ActionResult<Coverage> Get(int id)
         => _repo.GetById(id) is Coverage c ? Ok(c) : NotFound();

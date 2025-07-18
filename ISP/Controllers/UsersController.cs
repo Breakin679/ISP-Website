@@ -6,6 +6,11 @@ using ISP.Models;
 using Microsoft.AspNetCore.Mvc;
 using BCrypt.Net;
 using ISP.Services;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;  
+using Microsoft.Extensions.Configuration;
 
 
 namespace ISP.Controllers
@@ -15,10 +20,12 @@ namespace ISP.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IRepository<Users> _repo;
+        private readonly IConfiguration _configuration; 
 
-        public UsersController(IRepository<Users> repo)
+        public UsersController(IRepository<Users> repo, IConfiguration configuration    )
         {
             _repo = repo;
+            _configuration = configuration;
         }
 
         // GET /users
@@ -88,16 +95,41 @@ namespace ISP.Controllers
             var user = _repo
                 .GetAll()
                 .FirstOrDefault(u => u.email == creds.Email && u.password_hash==Hashfunction.ComputeSha1(creds.Password));
-
+            var jwtConfig = _configuration.GetSection("Jwt");
+            var keyString = jwtConfig["Key"];
+            if (string.IsNullOrEmpty(keyString))
+            {
+                // configuration is broken
+                return StatusCode(500, "JWT Key is not configured.");
+            }
             if (user == null)
                 return Unauthorized("Invalid credentials.");
+            var jwtSection = _configuration.GetSection("Jwt");
+            var KeyBytes = Encoding.ASCII.GetBytes(jwtSection["Key"]!);
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(JwtRegisteredClaimNames.Sub, user.email),
+                    new Claim(ClaimTypes.Role, user.role),
+                }),
+                Expires = DateTime.UtcNow.AddMinutes(30),
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(KeyBytes),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var jwt = tokenHandler.WriteToken(token);
+
+
 
             // verify password
-            
+
 
             // success: strip hash and return
             user.password_hash = null;
-            return Ok(user);
+            return Ok( new { token, user });
         }
 
         // PUT /users/{id}
