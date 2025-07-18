@@ -1,16 +1,30 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import RequestInstallationModal from "../components/Installation";
 import { FaHome, FaBuilding, FaNetworkWired } from "react-icons/fa";
 
 const Locations = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [locData, setLocData] = useState({
+    Residential: [""],
+    Corporate: [""],
+    Fiber: [""],
+  });
 
-  const locData = {
-    Residential: ["----", "----", "----"],
-    Corporate: ["----", "----", "----"],
-    Fiber: ["Beirut"],
-  };
+  useEffect(() => {
+    fetch("https://localhost:44325/locations")
+      .then((res) => res.json())
+      .then((data) => setLocData(data), setLoading(false))
+      .catch((err) => console.error("Failed to fetch locations:", err));
+  }, []);
+
+  if (loading) {
+    return "Please wait while we load the locations...";
+  }
+  if (!locData || Object.keys(locData).length === 0) {
+    return "No locations available at this time.";
+  }
   const subsOptions = {
     Residential: ["Basic Plan", "Standard Plan", "Premium Plan"],
     Corporate: ["Corporate Plan A", "Corporate Plan B"],

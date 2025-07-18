@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { use, useState } from "react";
 import { Link } from "react-router-dom";
 import RequestInstallationModal from "../components/Installation";
 import ReviewForm from "../components/ReviewForm";
+import useNavigateToSection from "../components/Functions";
 
 const Home = () => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -118,6 +119,12 @@ const Home = () => {
       reviews[(currentReview + 1) % total],
     ];
   };
+  const navigateToSection = useNavigateToSection();
+
+  // now clickHandler is a simple wrapper you can reuse:
+  const clickHandler = (page, section) => {
+    navigateToSection(page, section);
+  };
 
   return (
     <main className="pt-14  bg-white text-gray-900">
@@ -208,17 +215,16 @@ const Home = () => {
                   ))}
                 </ul>
                 <button
-                  onClick={() => openModal(plan.type)}
+                  onClick={() =>
+                    clickHandler(`/Subscriptions/${plan.type}`, "plans")
+                  }
                   className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
                 >
-                  Choose Plan
+                  View Plans
                 </button>
               </div>
             ))}
           </div>
-          <p className="mt-8 text-indigo-600 font-semibold">
-            <Link to="/subscriptions/fiber">View all plans & details →</Link>
-          </p>
         </section>
 
         {/* Testimonials */}

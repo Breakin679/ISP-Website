@@ -5,7 +5,7 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 export default function Residential({ locData = {}, subsOptions = {} }) {
   const scrollToPlans = () => {
-    const section = document.getElementById("Residential Plans");
+    const section = document.getElementById("Plans");
     if (section)
       section.scrollIntoView({ behavior: "smooth", block: "center" });
   };
@@ -119,10 +119,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
         </section>
 
         {/* Plans & Pricing with pagination */}
-        <section
-          id="Residential Plans"
-          className="bg-gray-50 py-16 px-4 relative"
-        >
+        <section id="Plans" className="bg-gray-50 py-16 px-4 relative">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
             Choose Your Plan
           </h2>

@@ -7,86 +7,60 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
   const [plans, setPlans] = useState([]);
   const [selected, setSelected] = useState("");
   const [statusMsg, setStatusMsg] = useState("");
-  const [mode, setMode] = useState("change"); // 'change' or 'add'
+  const [mode, setMode] = useState("change"); // 'change', 'add', etc.
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
+  const user = JSON.parse(localStorage.getItem("user")) || {};
 
   useEffect(() => {
-    // Mock fetch data; replace with real API calls
-    const mockCurrent = {
-      id: "plan-res-std",
-      title: "Residential Standard",
-      price: "$49.99",
-      type: "Residential",
+    const fetchSubscriptions = async () => {
+      try {
+        const jwt = localStorage.getItem("jwt");
+        const res = await fetch(
+          `https://localhost:44325/active/${user.user_id}`,
+          {
+            headers: { Authorization: `Bearer ${jwt}` },
+          }
+        );
+
+        const data = await res.json();
+        setCurrent(data.active[0] || null); // If only one active is allowed
+        setPlans([...data.active, ...data.inactive]);
+      } catch (err) {
+        console.error("Failed to fetch subscriptions", err);
+      }
     };
-    const mockPlans = [
-      {
-        id: "plan-res-basic",
-        title: "Residential Basic",
-        price: "$29.99",
-        type: "Residential",
-      },
-      {
-        id: "plan-res-std",
-        title: "Residential Standard",
-        price: "$49.99",
-        type: "Residential",
-      },
-      {
-        id: "plan-res-prem",
-        title: "Residential Premium",
-        price: "$79.99",
-        type: "Residential",
-      },
-      {
-        id: "plan-fib-basic",
-        title: "Fiber Basic",
-        price: "$39.99",
-        type: "Fiber",
-      },
-      {
-        id: "plan-fib-pro",
-        title: "Fiber Pro",
-        price: "$59.99",
-        type: "Fiber",
-      },
-    ];
-    setCurrent(mockCurrent);
-    setPlans(mockPlans);
-    setSelected(mockCurrent.id);
+
+    fetchSubscriptions();
   }, []);
 
   const openModal = (type) => {
     setInstallType(type);
     setIsModalOpen(true);
   };
+
   const closeModal = () => setIsModalOpen(false);
 
   const handleModalSubmit = (data) => {
-    console.log("Modal data", data);
-    // TODO: actually handle installation or plan-type change
+    console.log("Modal data submitted:", data);
+    setStatusMsg("Request submitted successfully!");
     closeModal();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ADD mode: always requests a new installation
-    if (mode === "add") {
-      const planType = plans.find((p) => p.id === selected)?.type;
-      return openModal(planType);
-    }
-
-    // CHANGE mode
     const planObj = plans.find((p) => p.id === selected);
     if (!planObj) return;
 
-    // If type differs, request a type-change via modal
+    if (mode === "add") {
+      return openModal(planObj.type);
+    }
+
     if (planObj.type !== current?.type) {
       return openModal(planObj.type);
     }
 
-    // Otherwise update within same type
     setStatusMsg("Updating your plan...");
     await new Promise((r) => setTimeout(r, 500));
     setCurrent(planObj);
@@ -99,12 +73,10 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
     setMode("add");
   };
 
-  // Filter out plans based on mode
   const availablePlans = plans.filter((p) =>
     mode === "change" ? p.type === current?.type : p.type !== current?.type
   );
 
-  // If no subscription, force add mode
   if (!current) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 px-4">
@@ -122,7 +94,6 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
             Add Subscription
           </button>
 
-          {/* Plan Selection UI */}
           <form onSubmit={handleSubmit} className="mt-12 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {availablePlans.map((plan) => (
@@ -171,7 +142,6 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
           )}
         </div>
 
-        {/* Installation Modal */}
         <RequestInstallationModal
           isOpen={isModalOpen}
           onClose={closeModal}
@@ -184,7 +154,6 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
     );
   }
 
-  // Normal UI with current subscription
   return (
     <main className="min-h-screen bg-gray-50 pt-24 px-4">
       <div className="max-w-3xl mx-auto">
@@ -192,31 +161,22 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
           Manage Your Subscription
         </h1>
 
-        {/* Mode Toggle */}
-        <div className="flex justify-center gap-4 mb-8">
-          <button
-            onClick={() => setMode("change")}
-            className={`px-4 py-2 rounded-lg shadow ${
-              mode === "change"
-                ? "bg-indigo-600 text-white"
-                : "bg-white text-gray-700"
-            }`}
-          >
-            Change Plan
-          </button>
-          <button
-            onClick={() => setMode("add")}
-            className={`px-4 py-2 rounded-lg shadow ${
-              mode === "add"
-                ? "bg-indigo-600 text-white"
-                : "bg-white text-gray-700"
-            }`}
-          >
-            Add Subscription
-          </button>
+        <div className="flex justify-center gap-4 mb-8 flex-wrap">
+          {["add", "change", "activate", "deactivate"].map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`px-4 py-2 rounded-lg shadow capitalize ${
+                mode === m
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-700"
+              }`}
+            >
+              {m} Subscription
+            </button>
+          ))}
         </div>
 
-        {/* Current Plan (Change Mode) */}
         {mode === "change" && (
           <div className="bg-white shadow-md rounded-lg p-6 mb-4 border-l-4 border-indigo-500 relative">
             <h2 className="text-xl font-semibold text-gray-700 mb-2">
@@ -233,7 +193,6 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
           </div>
         )}
 
-        {/* Plan Selection */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
             {availablePlans.map((plan) => (
@@ -293,7 +252,6 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
         )}
       </div>
 
-      {/* Installation Modal */}
       <RequestInstallationModal
         isOpen={isModalOpen}
         onClose={closeModal}

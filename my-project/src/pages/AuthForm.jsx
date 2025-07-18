@@ -38,8 +38,9 @@ export default function AuthForm() {
       if (!res.ok) {
         throw new Error("Invalid credentials");
       }
-      const user = await res.json();
+      const { token, user } = await res.json();
       saveUser(user);
+      localStorage.setItem("token", token);
       window.location.href = user.role === "admin" ? "/admin" : "/";
     } catch (err) {
       setError("Login failed: " + err.message);
