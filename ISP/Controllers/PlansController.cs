@@ -1,4 +1,5 @@
 // ISP/Controllers/PlansController.cs
+using ISP.DataAccess.Interfaces;
 using ISP.Models;
 using ISP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -11,11 +12,12 @@ public class PlansController : ControllerBase
 {
     private readonly ILogger<PlansController> _logger;
     private readonly IPlansService _plansService;
-
-    public PlansController(
+    private readonly IRepository<Plan> _repo;
+    public PlansController(IRepository<Plan> repo,
         ILogger<PlansController> logger,
         IPlansService plansService)
     {
+        _repo = repo;
         _logger = logger;
         _plansService = plansService;
     }
@@ -35,4 +37,19 @@ public class PlansController : ControllerBase
     [HttpGet("type/{typeId:int}")]
     public ActionResult<IEnumerable<Plan>> GetByType(int typeId)
         => Ok(_plansService.GetPlansByType(typeId));
+
+    [HttpGet("types")]
+    public ActionResult<IEnumerable<Plan>> GetPlanTypes()
+    {
+        var types = _repo.GetAll();
+        return Ok(types);
+    }
+    [HttpPost]
+    public ActionResult<long> Create([FromBody] Plan newPlan)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest("Invalid input");
+
+       return CreatedAtAction(nameof(GetById), new { id = _repo.Insert(newPlan) }, newPlan);
+    }
 }
