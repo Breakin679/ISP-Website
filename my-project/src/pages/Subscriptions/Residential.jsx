@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FaWifi, FaTv, FaGamepad } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
@@ -204,20 +205,29 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
           </div>
         </section>
 
-        {/* Call to Action */}
+        {/* Final CTA */}
         <section className="text-center py-16 px-4">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Ready to Upgrade Your Home Internet?
+            Want to check other Plans?
           </h2>
           <p className="text-lg mb-6 max-w-xl mx-auto">
-            Get started today and experience a faster, more reliable connection.
+            Join thousands of homes and businesses enjoying fast, stable
+            internet.
           </p>
-          <button
-            onClick={() => openModal("Residential")}
-            className="bg-teal-600 text-white font-semibold px-8 py-3 rounded-md shadow hover:bg-teal-700 transition"
-          >
-            Sign Up Now
-          </button>
+          <div className="flex justify-center gap-4">
+            <Link
+              to="/subscriptions/fiber"
+              className="inline-block text-lg bg-indigo-800 text-white font-semibold px-8 py-4 rounded-full shadow hover:bg-gray-100 transition"
+            >
+              Check Fiber Plans
+            </Link>
+            <Link
+              to="/subscriptions/corporate"
+              className="inline-block text-lg bg-indigo-800 text-white font-semibold px-8 py-4 rounded-full shadow hover:bg-gray-100 transition"
+            >
+              Check Corporate Plans
+            </Link>
+          </div>
         </section>
       </main>
 

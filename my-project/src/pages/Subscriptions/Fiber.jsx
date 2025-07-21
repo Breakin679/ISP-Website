@@ -7,6 +7,7 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import RequestInstallationModal from "../../components/Installation";
 import useNavigateToSection from "../../components/Functions";
@@ -216,18 +217,26 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
         {/* Final CTA */}
         <section className="text-center py-16 px-4">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Ready for Reliable Fiber?
+            Want to check other Plans?
           </h2>
           <p className="text-lg mb-6 max-w-xl mx-auto">
             Join thousands of homes and businesses enjoying fast, stable
             internet.
           </p>
-          <button
-            onClick={() => openModal("Fiber")}
-            className="bg-pink-600 text-white font-semibold px-8 py-3 rounded-md shadow hover:bg-pink-700 transition"
-          >
-            Get Started
-          </button>
+          <div className="flex justify-center gap-4">
+            <Link
+              to="/subscriptions/residential"
+              className="inline-block text-lg bg-indigo-800 text-white font-semibold px-8 py-4 rounded-full shadow hover:bg-gray-100 transition"
+            >
+              Check Residential Plans
+            </Link>
+            <Link
+              to="/subscriptions/corporate"
+              className="inline-block text-lg bg-indigo-800 text-white font-semibold px-8 py-4 rounded-full shadow hover:bg-gray-100 transition"
+            >
+              Check Corporate Plans
+            </Link>
+          </div>
         </section>
       </main>
       <RequestInstallationModal

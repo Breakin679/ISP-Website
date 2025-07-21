@@ -1,265 +1,283 @@
-// src/pages/ManageSubscription.jsx
 import React, { useState, useEffect } from "react";
 import RequestInstallationModal from "../components/Installation";
 
 export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
-  const [current, setCurrent] = useState(null);
-  const [plans, setPlans] = useState([]);
-  const [selected, setSelected] = useState("");
+  const [subs, setSubs] = useState([]); // SubscriptionView[]
+  const [plans, setPlans] = useState([]); // Plan[]
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [mode, setMode] = useState("view"); // view | add | change
   const [statusMsg, setStatusMsg] = useState("");
-  const [mode, setMode] = useState("change"); // 'change', 'add', etc.
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
+
   const user = JSON.parse(localStorage.getItem("user")) || {};
+  const userId = user.id;
+  const jwt = localStorage.getItem("jwt") || "";
 
+  // Fetch active subscriptions
   useEffect(() => {
-    const fetchSubscriptions = async () => {
+    if (!userId) return;
+    (async () => {
       try {
-        const jwt = localStorage.getItem("jwt");
         const res = await fetch(
-          `https://localhost:44325/active/${user.user_id}`,
-          {
-            headers: { Authorization: `Bearer ${jwt}` },
-          }
+          `https://localhost:44325/subscriptions/active/${userId}`,
+          { headers: { Authorization: `Bearer ${jwt}` } }
         );
-
-        const data = await res.json();
-        setCurrent(data.active[0] || null); // If only one active is allowed
-        setPlans([...data.active, ...data.inactive]);
+        if (res.status === 404) {
+          setSubs([]);
+          setMode("add");
+        } else {
+          const data = await res.json();
+          setSubs(data);
+          setMode("view");
+        }
       } catch (err) {
-        console.error("Failed to fetch subscriptions", err);
+        console.error(err);
+        setStatusMsg("Could not load your subscriptions.");
       }
-    };
+    })();
+  }, [userId, jwt]);
 
-    fetchSubscriptions();
-  }, []);
+  // Fetch all plans
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("https://localhost:44325/plans/available", {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (!res.ok) throw new Error(res.statusText);
+        setPlans(await res.json());
+      } catch (err) {
+        console.error(err);
+        setStatusMsg("Could not load plans.");
+      }
+    })();
+  }, [jwt]);
 
-  const openModal = (type) => {
-    setInstallType(type);
+  // Whenever mode changes, clear selection
+  useEffect(() => {
+    setSelectedPlanId(null);
+    setStatusMsg("");
+  }, [mode]);
+
+  // Open/close modal
+  const openModal = (planType) => {
+    setInstallType(planType);
     setIsModalOpen(true);
   };
-
   const closeModal = () => setIsModalOpen(false);
 
-  const handleModalSubmit = (data) => {
-    console.log("Modal data submitted:", data);
-    setStatusMsg("Request submitted successfully!");
-    closeModal();
+  // Add a brand‑new subscription
+  const handleAdd = async (planId, installData) => {
+    try {
+      const payload = { userId, planId, serverId: installData.location };
+      const res = await fetch("https://localhost:44325/subscriptions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(res.statusText);
+      const newSub = await res.json(); // SubscriptionView
+      setSubs((prev) => [...prev, newSub]); // append
+      setMode("view");
+      setStatusMsg("Subscription added!");
+    } catch (err) {
+      console.error(err);
+      setStatusMsg("Failed to add subscription.");
+    }
   };
 
-  const handleSubmit = async (e) => {
+  // Replace an existing subscription
+  const handleChange = async (oldSubId, newPlanId, installData) => {
+    try {
+      // 1) end old subscription
+      let res = await fetch(
+        `https://localhost:44325/subscriptions/${oldSubId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${jwt}` },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to end old subscription");
+
+      // 2) create new subscription
+      await handleAdd(newPlanId, installData);
+      // 3) remove old from local state
+      setSubs((prev) => prev.filter((s) => s.subscriptionId !== oldSubId));
+      setStatusMsg("Subscription changed!");
+    } catch (err) {
+      console.error(err);
+      setStatusMsg("Failed to change subscription.");
+    }
+  };
+
+  // Unsubscribe button
+  const handleUnsubscribe = async (subscriptionId) => {
+    try {
+      const res = await fetch(
+        `https://localhost:44325/subscriptions/${subscriptionId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${jwt}` },
+        }
+      );
+      if (!res.ok) throw new Error(res.statusText);
+      setSubs((prev) =>
+        prev.filter((s) => s.subscriptionId !== subscriptionId)
+      );
+      if (subs.length <= 1) setMode("add");
+      setStatusMsg("Unsubscribed.");
+    } catch (err) {
+      console.error(err);
+      setStatusMsg("Failed to unsubscribe.");
+    }
+  };
+
+  // Form submit → show modal
+  const handleSubmit = (e) => {
     e.preventDefault();
-
-    const planObj = plans.find((p) => p.id === selected);
-    if (!planObj) return;
-
-    if (mode === "add") {
-      return openModal(planObj.type);
-    }
-
-    if (planObj.type !== current?.type) {
-      return openModal(planObj.type);
-    }
-
-    setStatusMsg("Updating your plan...");
-    await new Promise((r) => setTimeout(r, 500));
-    setCurrent(planObj);
-    setStatusMsg("Plan updated successfully!");
+    if (!selectedPlanId) return;
+    const plan = plans.find((p) => p.id === selectedPlanId);
+    openModal(
+      plan.plan_type_id === 1
+        ? "Fiber"
+        : plan.plan_type_id === 2
+        ? "Residential"
+        : "Corporate"
+    );
   };
 
-  const handleUnsubscribe = () => {
-    setCurrent(null);
-    setStatusMsg("You have successfully unsubscribed.");
-    setMode("add");
-  };
-
-  const availablePlans = plans.filter((p) =>
-    mode === "change" ? p.type === current?.type : p.type !== current?.type
+  // Which plans to show?
+  const currentType = subs[0]?.plan_type_id;
+  const available = plans.filter((p) =>
+    mode === "change"
+      ? p.plan_type_id === currentType
+      : p.plan_type_id !== currentType
   );
 
-  if (!current) {
-    return (
-      <main className="min-h-screen bg-gray-50 pt-24 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-3xl font-extrabold text-gray-800 mb-6">
-            You have no active subscription
-          </h1>
-          <p className="mb-8 text-gray-600">
-            Click below to add a new subscription.
-          </p>
+  return (
+    <main className="pt-24 px-4 bg-gray-50 min-h-screen">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          Manage Subscription
+        </h1>
+
+        {/* Active Subs */}
+        {subs.length > 0 && (
+          <ul className="space-y-4 mb-8">
+            {subs.map((s) => (
+              <li
+                key={s.subscriptionId}
+                className="bg-white p-4 rounded shadow flex justify-between"
+              >
+                <div>
+                  <div className="font-semibold">{s.planName}</div>
+                  <div className="text-gray-500 text-sm">
+                    {s.location} &middot; Started{" "}
+                    {new Date(s.startDate).toLocaleDateString()}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleUnsubscribe(s.subscriptionId)}
+                  className="text-red-500 hover:underline text-sm"
+                >
+                  Unsubscribe
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Mode buttons */}
+        <div className="flex justify-center gap-4 mb-8">
           <button
             onClick={() => setMode("add")}
-            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition"
+            className={`px-4 py-2 rounded ${
+              mode === "add"
+                ? "bg-indigo-600 text-white"
+                : "bg-white text-gray-700"
+            }`}
           >
             Add Subscription
           </button>
+          {subs.length > 0 && (
+            <button
+              onClick={() => setMode("change")}
+              className={`px-4 py-2 rounded ${
+                mode === "change"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-700"
+              }`}
+            >
+              Change Plan
+            </button>
+          )}
+        </div>
 
-          <form onSubmit={handleSubmit} className="mt-12 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {availablePlans.map((plan) => (
+        {/* Plan form */}
+        {(mode === "add" || mode === "change") && (
+          <form onSubmit={handleSubmit} className="mb-8 space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              {available.map((plan) => (
                 <label
                   key={plan.id}
-                  htmlFor={plan.id}
-                  className={`cursor-pointer block p-4 rounded-lg border-2 transition-shadow hover:shadow-lg bg-white ${
-                    selected === plan.id
-                      ? "border-indigo-500 shadow"
+                  className={`p-4 border-2 rounded cursor-pointer ${
+                    selectedPlanId === plan.id
+                      ? "border-indigo-500 bg-white shadow"
                       : "border-transparent"
                   }`}
                 >
                   <input
-                    id={plan.id}
                     type="radio"
                     name="plan"
                     value={plan.id}
-                    checked={selected === plan.id}
-                    onChange={() => setSelected(plan.id)}
+                    checked={selectedPlanId === plan.id}
+                    onChange={() => setSelectedPlanId(plan.id)}
                     className="sr-only"
                   />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {plan.title}
-                      </h3>
-                      <p className="text-gray-600">{plan.price}/mo</p>
-                    </div>
-                    {selected === plan.id && (
-                      <span className="text-indigo-500 font-bold">✓</span>
-                    )}
+                  <div>
+                    <div className="font-semibold">{plan.name}</div>
+                    <div className="text-gray-600">${plan.price}</div>
                   </div>
                 </label>
               ))}
             </div>
             <button
               type="submit"
-              className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition"
+              className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
             >
-              Request New {plans.find((p) => p.id === selected)?.type}{" "}
-              Subscription
+              {mode === "add"
+                ? "Request New Subscription"
+                : "Change Subscription"}
             </button>
           </form>
-          {statusMsg && (
-            <p className="mt-4 text-indigo-600 font-medium">{statusMsg}</p>
-          )}
-        </div>
+        )}
 
+        {statusMsg && (
+          <p className="text-center text-indigo-600">{statusMsg}</p>
+        )}
+
+        {/* Installation Modal */}
         <RequestInstallationModal
           isOpen={isModalOpen}
           onClose={closeModal}
           installType={installType}
           locData={locData}
           subsOptions={subsOptions}
-          onSubmit={handleModalSubmit}
+          onSubmit={(installData) => {
+            if (mode === "add") {
+              handleAdd(selectedPlanId, installData);
+            } else {
+              // for change, end the first sub and add new
+              handleChange(subs[0].subscriptionId, selectedPlanId, installData);
+            }
+            closeModal();
+          }}
         />
-      </main>
-    );
-  }
-
-  return (
-    <main className="min-h-screen bg-gray-50 pt-24 px-4">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-extrabold text-gray-800 mb-6 text-center">
-          Manage Your Subscription
-        </h1>
-
-        <div className="flex justify-center gap-4 mb-8 flex-wrap">
-          {["add", "change", "activate", "deactivate"].map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`px-4 py-2 rounded-lg shadow capitalize ${
-                mode === m
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white text-gray-700"
-              }`}
-            >
-              {m} Subscription
-            </button>
-          ))}
-        </div>
-
-        {mode === "change" && (
-          <div className="bg-white shadow-md rounded-lg p-6 mb-4 border-l-4 border-indigo-500 relative">
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">
-              Current {current.type} Plan
-            </h2>
-            <p className="text-gray-900 text-2xl font-bold">{current.title}</p>
-            <p className="text-indigo-600">{current.price}/mo</p>
-            <button
-              onClick={handleUnsubscribe}
-              className="absolute top-4 right-4 text-sm text-red-500 hover:underline"
-            >
-              Unsubscribe
-            </button>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-            {availablePlans.map((plan) => (
-              <label
-                key={plan.id}
-                htmlFor={plan.id}
-                className={`cursor-pointer block p-4 rounded-lg border-2 transition-shadow hover:shadow-lg bg-white ${
-                  selected === plan.id
-                    ? "border-indigo-500 shadow"
-                    : "border-transparent"
-                }`}
-              >
-                <input
-                  id={plan.id}
-                  type="radio"
-                  name="plan"
-                  value={plan.id}
-                  checked={selected === plan.id}
-                  onChange={() => setSelected(plan.id)}
-                  className="sr-only"
-                />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      {plan.title}
-                    </h3>
-                    <p className="text-gray-600">{plan.price}/mo</p>
-                  </div>
-                  {selected === plan.id && (
-                    <span className="text-indigo-500 font-bold">✓</span>
-                  )}
-                </div>
-              </label>
-            ))}
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition"
-          >
-            {mode === "change"
-              ? plans.find((p) => p.id === selected)?.type === current?.type
-                ? `Change to Selected ${current.type} Plan`
-                : `Request ${
-                    plans.find((p) => p.id === selected)?.type
-                  } Plan Change`
-              : `Request New ${
-                  plans.find((p) => p.id === selected)?.type
-                } Subscription`}
-          </button>
-        </form>
-
-        {statusMsg && (
-          <p className="mt-4 text-center text-indigo-600 font-medium">
-            {statusMsg}
-          </p>
-        )}
       </div>
-
-      <RequestInstallationModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        installType={installType}
-        locData={locData}
-        subsOptions={subsOptions}
-        onSubmit={handleModalSubmit}
-      />
     </main>
   );
 }
