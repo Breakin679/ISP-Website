@@ -3,6 +3,7 @@ import { FaWifi, FaTv, FaGamepad } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import authFetch from "../../utils/authFetch";
 
 export default function Residential({ locData = {}, subsOptions = {} }) {
   const scrollToPlans = () => {
@@ -26,7 +27,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
   useEffect(() => {
     async function loadplans(params) {
       try {
-        const resp = await fetch("https://localhost:44325/plans/type/2");
+        const resp = await fetch("https://localhost:44325/plans/type/2"); // public endpoint, keep as fetch
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         setPlans(data);

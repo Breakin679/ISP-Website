@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
 import useNavigateToSection from "../../components/Functions";
 import useScrollToHash from "../../hooks/useScrollToHash";
+import authFetch from "../../utils/authFetch";
 
 export default function Fiber({ locData = {}, subsOptions = {} }) {
   // scroll to any hash on mount/navigation
@@ -41,7 +42,7 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
   useEffect(() => {
     async function loadPlans() {
       try {
-        const resp = await fetch("https://localhost:44325/plans/type/1");
+        const resp = await fetch("https://localhost:44325/plans/type/1"); // public endpoint, keep as fetch
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         setPlans(data);

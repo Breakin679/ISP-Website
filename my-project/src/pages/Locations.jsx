@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import RequestInstallationModal from "../components/Installation";
 import { FaHome, FaBuilding, FaNetworkWired } from "react-icons/fa";
+import authFetch from "../utils/authFetch";
 
 const Locations = () => {
   const [modalOpen, setModalOpen] = useState(false);

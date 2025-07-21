@@ -9,12 +9,15 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const saveUser = (data) => {
+  // Save user and token to localStorage
+  const saveUser = (data, token) => {
     localStorage.setItem("user", JSON.stringify(data));
     localStorage.setItem("role", data.role);
+    if (token) localStorage.setItem("token", token);
   };
 
-  const API_BASE = "https://localhost:44325";
+  // const API_BASE = "https://localhost:44325"; // original API
+  const API_BASE = "http://localhost:30112"; // local API for easier switching
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -39,8 +42,7 @@ export default function AuthForm() {
         throw new Error("Invalid credentials");
       }
       const { token, user } = await res.json();
-      saveUser(user);
-      localStorage.setItem("token", token);
+      saveUser(user, token);
       window.location.href = user.role === "admin" ? "/admin" : "/";
     } catch (err) {
       setError("Login failed: " + err.message);

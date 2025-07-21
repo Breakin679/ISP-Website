@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import authFetch from "../utils/authFetch";
 
 export default function RequestInstallationModal({
   isOpen,
@@ -45,7 +46,7 @@ export default function RequestInstallationModal({
         // fetch all coverage, then filter by plan_type_id
         const covResp = await fetch(
           `https://localhost:44325/coverage/type/${typeId}`
-        );
+        ); // public endpoint, keep as fetch
         if (!covResp.ok) throw new Error(`Coverage HTTP ${covResp.status}`);
         const locList = await covResp.json();
         setLocOptions(locList.map((c) => c.location));
@@ -53,7 +54,7 @@ export default function RequestInstallationModal({
         // fetch plans for this type
         const planResp = await fetch(
           `https://localhost:44325/plans/type/${typeId}`
-        );
+        ); // public endpoint, keep as fetch
         if (!planResp.ok) throw new Error(`Plans HTTP ${planResp.status}`);
         const plans = await planResp.json();
         // map to whatever display string you need, here plan.name

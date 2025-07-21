@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import authFetch from "../../utils/authFetch";
 
 export default function ManagePlans() {
   const [plans, setPlans] = useState([]);
@@ -15,7 +16,7 @@ export default function ManagePlans() {
   // 1) Fetch all plans
   const fetchPlans = async () => {
     try {
-      const res = await fetch("https://localhost:44325/plans/types");
+      const res = await authFetch("https://localhost:44325/plans/types");
       if (!res.ok) throw new Error(`Fetch error: ${res.status}`);
       setPlans(await res.json());
     } catch (err) {
@@ -26,7 +27,7 @@ export default function ManagePlans() {
   // 2) Fetch plan types
   const fetchPlanTypes = async () => {
     try {
-      const res = await fetch("https://localhost:44325/plan-types");
+      const res = await authFetch("https://localhost:44325/plan-types");
       if (!res.ok) throw new Error(`Fetch types error: ${res.status}`);
       setPlanTypes(await res.json());
     } catch (err) {
@@ -61,7 +62,7 @@ export default function ManagePlans() {
     }
 
     try {
-      const res = await fetch("https://localhost:44325/plans", {
+      const res = await authFetch("https://localhost:44325/plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -81,7 +82,7 @@ export default function ManagePlans() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this plan?")) return;
     try {
-      const res = await fetch(`https://localhost:44325/plans/${id}`, {
+      const res = await authFetch(`https://localhost:44325/plans/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(`Delete error: ${res.status}`);

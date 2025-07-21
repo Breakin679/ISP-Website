@@ -12,16 +12,18 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
 
   const user = JSON.parse(localStorage.getItem("user")) || {};
   const userId = user.id;
-  const jwt = localStorage.getItem("jwt") || "";
+  const token = localStorage.getItem("token") || "";
 
   // Fetch active subscriptions
   useEffect(() => {
     if (!userId) return;
     (async () => {
       try {
+        // const res = await fetch(
+        //   `https://localhost:44325/subscriptions/active/${userId}`,
         const res = await fetch(
-          `https://localhost:44325/subscriptions/active/${userId}`,
-          { headers: { Authorization: `Bearer ${jwt}` } }
+          `http://localhost:30112/subscriptions/active/${userId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         if (res.status === 404) {
           setSubs([]);
@@ -36,14 +38,15 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
         setStatusMsg("Could not load your subscriptions.");
       }
     })();
-  }, [userId, jwt]);
+  }, [userId, token]);
 
   // Fetch all plans
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("https://localhost:44325/plans/available", {
-          headers: { Authorization: `Bearer ${jwt}` },
+        // const res = await fetch("https://localhost:44325/plans/available", {
+        const res = await fetch("http://localhost:30112/plans/available", {
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(res.statusText);
         setPlans(await res.json());
@@ -52,7 +55,7 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
         setStatusMsg("Could not load plans.");
       }
     })();
-  }, [jwt]);
+  }, [token]);
 
   // Whenever mode changes, clear selection
   useEffect(() => {
@@ -70,12 +73,12 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
   // Add a brand‑new subscription
   const handleAdd = async (planId, installData) => {
     try {
-      const payload = { userId, planId, serverId: installData.location };
-      const res = await fetch("https://localhost:44325/subscriptions", {
+      // const res = await fetch("https://localhost:44325/subscriptions", {
+      const res = await fetch("http://localhost:30112/subscriptions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -94,11 +97,13 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
   const handleChange = async (oldSubId, newPlanId, installData) => {
     try {
       // 1) end old subscription
+      // let res = await fetch(
+      //   `https://localhost:44325/subscriptions/${oldSubId}`,
       let res = await fetch(
-        `https://localhost:44325/subscriptions/${oldSubId}`,
+        `http://localhost:30112/subscriptions/${oldSubId}`,
         {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${jwt}` },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       if (!res.ok) throw new Error("Failed to end old subscription");
@@ -117,11 +122,13 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
   // Unsubscribe button
   const handleUnsubscribe = async (subscriptionId) => {
     try {
+      // const res = await fetch(
+      //   `https://localhost:44325/subscriptions/${subscriptionId}`,
       const res = await fetch(
-        `https://localhost:44325/subscriptions/${subscriptionId}`,
+        `http://localhost:30112/subscriptions/${subscriptionId}`,
         {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${jwt}` },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       if (!res.ok) throw new Error(res.statusText);
