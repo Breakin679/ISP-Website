@@ -4,23 +4,23 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 
 [ApiController]
-[Route("user-ips")]
-public class UsersIPsController : ControllerBase
+[Route("ipaddresses")]
+public class IPAddressesController : ControllerBase
 {
-    private readonly IRepository<UsersIPs> _repo;
-    public UsersIPsController(IRepository<UsersIPs> repo) => _repo = repo;
+    private readonly IRepository<IPAddress> _repo;
+    public IPAddressesController(IRepository<IPAddress> repo) => _repo = repo;
 
-    [HttpGet] public ActionResult<IEnumerable<UsersIPs>> GetAll() => Ok(_repo.GetAll());
+    [HttpGet] public ActionResult<IEnumerable<IPAddress>> GetAll() => Ok(_repo.GetAll());
     [HttpGet("{id:int}")]
-    public ActionResult<UsersIPs> Get(int id)
-        => _repo.GetById(id) is UsersIPs ui ? Ok(ui) : NotFound();
+    public ActionResult<IPAddress> Get(int id)
+        => _repo.GetById(id) is IPAddress ui ? Ok(ui) : NotFound();
 
     [HttpPost]
-    public ActionResult<long> Create(UsersIPs ui)
+    public ActionResult<long> Create(IPAddress ui)
         => CreatedAtAction(nameof(Get), new { id = _repo.Insert(ui) }, ui);
 
     [HttpPut("{id:int}")]
-    public IActionResult Update(int id, UsersIPs ui)
+    public IActionResult Update(int id, IPAddress ui)
     {
         if (_repo.GetById(id) is null) return NotFound();
         ui.id = id;

@@ -8,7 +8,7 @@ namespace ISP.Models
     {
         [Key]
         public int id { get; set; }
-        public int users_id { get; set; }
+        
         public int plan_id { get; set; }
         public DateTime start_date { get; set; }
         public int consumption { get; set; }

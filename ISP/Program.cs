@@ -8,8 +8,11 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Dapper;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 var jwt = builder.Configuration

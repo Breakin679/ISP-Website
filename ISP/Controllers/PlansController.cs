@@ -52,4 +52,25 @@ public class PlansController : ControllerBase
 
        return CreatedAtAction(nameof(GetById), new { id = _repo.Insert(newPlan) }, newPlan);
     }
+    [HttpDelete("{id:int}")]
+    public ActionResult Delete(int id)
+    {
+        var plan = _repo.GetById(id);
+        if (plan is null) return NotFound();
+        
+        _repo.Delete(id);
+        return NoContent();
+    }
+    [HttpPut("{id:int}")]
+    public ActionResult Update(int id, [FromBody] Plan updatedPlan)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest("Invalid input");
+        var existingPlan = _repo.GetById(id);
+        if (existingPlan is null) return NotFound();
+        updatedPlan.id = id; // Ensure the ID matches
+        if (!_repo.Update(updatedPlan))
+            return StatusCode(500, "Update failed");
+        return NoContent();
+    }
 }
