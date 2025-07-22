@@ -6,13 +6,17 @@ export default function ManagePlans() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    price: "",
-    description: "",
-    typeId: 4, // start empty so user must choose 1,2,3
+    price: 0.0, // decimal
+    description_plan: "",
+    plan_type_id: 4,
+    bandwidth: 0, // ← new
+    data_limit: 0, // ← new
+    limit_type: 0, // ← new (0–3)
+    public_ip_count: 0, // ← new
   });
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  // 1) Fetch all plans
   const fetchPlans = async () => {
     try {
       const res = await fetch("https://localhost:44325/plans/types");
@@ -23,7 +27,6 @@ export default function ManagePlans() {
     }
   };
 
-  // 2) Fetch plan types
   const fetchPlanTypes = async () => {
     try {
       const res = await fetch("https://localhost:44325/plan-types");
@@ -39,35 +42,77 @@ export default function ManagePlans() {
     fetchPlanTypes();
   }, []);
 
-  // 3) Handle inputs, parse typeId to int
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: name === "typeId" ? parseInt(value, 10) : value,
+      [name]:
+        name === "plan_type_id" ||
+        name === "bandwidth" ||
+        name === "data_limit" ||
+        name === "limit_type" ||
+        name === "public_ip_count"
+          ? parseInt(value, 10) || ""
+          : name === "price"
+          ? parseFloat(value) || ""
+          : value,
     }));
   };
+  // NEW: preload form for editing
+  const startEdit = (plan) => {
+    setEditingId(plan.id);
+    setForm({
+      name: plan.name,
+      price: plan.price,
+      description_plan: plan.description_plan,
+      bandwidth: plan.bandwidth,
+      data_limit: plan.data_limit,
+      plan_type_id: plan.plan_type_id,
+      limit_type: plan.limit_type,
+      public_ip_count: plan.public_ip_count,
+    });
+    setShowForm(true);
+  };
 
-  // 4) Submit new plan
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // guard: ensure typeId is 1,2,or 3
-    if (![1, 2, 3].includes(form.typeId)) {
-      alert("Please select a valid Plan Type.");
-      setLoading(false);
-      return;
-    }
+    // choose URL + method based on edit vs add
+    const url = editingId
+      ? `https://localhost:44325/plans/${editingId}`
+      : "https://localhost:44325/plans";
+    const method = editingId ? "PUT" : "POST";
+
+    const payload = {
+      name: form.name,
+      description_plan: form.description_plan,
+      bandwidth: form.bandwidth,
+      data_limit: form.data_limit,
+      plan_type_id: form.plan_type_id,
+      limit_type: form.limit_type,
+      price: form.price,
+      public_ip_count: form.public_ip_count,
+    };
 
     try {
-      const res = await fetch("https://localhost:44325/plans", {
-        method: "POST",
+      const res = await fetch(url, {
+        method, // dynamic
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Post error: ${res.status}`);
-      setForm({ name: "", price: "", description: "", typeId: "" });
+      if (editingId) setEditingId(null);
+      setForm({
+        name: "",
+        price: 0.0,
+        description_plan: "",
+        plan_type_id: 0,
+        bandwidth: 0,
+        data_limit: 0,
+        limit_type: 0,
+        public_ip_count: 0,
+      });
       setShowForm(false);
       fetchPlans();
     } catch (err) {
@@ -77,7 +122,6 @@ export default function ManagePlans() {
     }
   };
 
-  // 5) Delete plan
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this plan?")) return;
     try {
@@ -94,12 +138,21 @@ export default function ManagePlans() {
   return (
     <main className="pt-24 px-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Manage Plans</h1>
+        <h1 className="text-3xl font-bold">
+          Manage Plans {editingId ? "(Editing)" : ""}
+        </h1>
         <button
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => {
+            if (showForm) {
+              setEditingId(null);
+              setShowForm(false);
+            } else {
+              setShowForm(true);
+            }
+          }}
         >
-          {showForm ? "Cancel" : "Add Plan"}
+          {showForm ? (editingId ? "Cancel Edit" : "Cancel") : "Add Plan"}
         </button>
       </div>
 
@@ -130,23 +183,52 @@ export default function ManagePlans() {
                 name="price"
                 value={form.price}
                 onChange={handleChange}
-                type="text"
-                placeholder="$0.00"
+                type="number"
+                step="0.01"
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
                 required
               />
             </div>
 
-            {/* Description */}
+            {/* description_plan */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Description
               </label>
-              <textarea
-                name="description"
-                value={form.description}
+              <input
+                name="description_plan"
+                value={form.description_plan}
                 onChange={handleChange}
-                rows={3}
+                type="text"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+              />
+            </div>
+
+            {/* Bandwidth */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Bandwidth (Mbps)
+              </label>
+              <input
+                name="bandwidth"
+                value={form.bandwidth}
+                onChange={handleChange}
+                type="number"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                required
+              />
+            </div>
+
+            {/* Data Limit */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Data Limit (GB)
+              </label>
+              <input
+                name="data_limit"
+                value={form.data_limit}
+                onChange={handleChange}
+                type="number"
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
                 required
               />
@@ -158,8 +240,8 @@ export default function ManagePlans() {
                 Plan Type
               </label>
               <select
-                name="typeId"
-                value={form.typeId}
+                name="plan_type_id"
+                value={form.plan_type_id}
                 onChange={handleChange}
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
                 required
@@ -173,13 +255,51 @@ export default function ManagePlans() {
               </select>
             </div>
 
+            {/* Limit Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Limit Type (0–3)
+              </label>
+              <input
+                name="limit_type"
+                value={form.limit_type}
+                onChange={handleChange}
+                type="number"
+                min="-1"
+                max="1"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                required
+              />
+            </div>
+
+            {/* Public IP Count */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Public IP Count
+              </label>
+              <input
+                name="public_ip_count"
+                value={form.public_ip_count}
+                onChange={handleChange}
+                type="number"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                required
+              />
+            </div>
+
             {/* Submit */}
             <button
               type="submit"
               disabled={loading}
               className="self-end bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
             >
-              {loading ? "Adding..." : "Add Plan"}
+              {loading
+                ? editingId
+                  ? "Saving..."
+                  : "Adding..."
+                : editingId
+                ? "Update Plan"
+                : "Add Plan"}
             </button>
           </form>
         </div>
@@ -190,16 +310,24 @@ export default function ManagePlans() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              {["Plan Name", "Price", "Description", "Type ID", "Actions"].map(
-                (header) => (
-                  <th
-                    key={header}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                  >
-                    {header}
-                  </th>
-                )
-              )}
+              {[
+                "Plan Name",
+                "Price",
+                "description_plan",
+                "Bandwidth",
+                "Data Limit",
+                "Type ID",
+                "Limit Type",
+                "Public IPs",
+                "Actions",
+              ].map((header) => (
+                <th
+                  key={header}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                >
+                  {header}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -207,12 +335,21 @@ export default function ManagePlans() {
               <tr key={p.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">{p.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{p.price}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{p.description}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{p.typeId}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {p.description_plan}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">{p.bandwidth}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{p.data_limit}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {p.plan_type_id}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">{p.limit_type}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {p.public_ip_count}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap flex gap-4">
-                  {/* TODO: Edit flow */}
-                  <button>{/* ✏️ */}</button>
-                  <button onClick={() => handleDelete(p.id)}>{/* 🗑️ */}</button>
+                  <button onClick={() => startEdit(p)}>✏️</button>
+                  <button onClick={() => handleDelete(p.id)}>🗑️</button>
                 </td>
               </tr>
             ))}
