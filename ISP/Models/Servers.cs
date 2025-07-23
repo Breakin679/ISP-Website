@@ -1,4 +1,4 @@
-﻿using Dapper.Contrib.Extensions;
+﻿/*using Dapper.Contrib.Extensions;
 
 namespace ISP.Models
 {
@@ -9,8 +9,9 @@ namespace ISP.Models
         public int id { get; set; }
         public required string name { get; set; }
         public int coverage_id { get; set; }
-        public required string Location { get; set; }
+
         public int bandwidth { get; set; }
         public string? status { get; set; }
     }
 }
+*/

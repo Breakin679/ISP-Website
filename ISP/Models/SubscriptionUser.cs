@@ -4,6 +4,8 @@ namespace ISP.Models
     [Table("SubscriptionUsers")]
     public class SubscriptionUser
     {
+        [Key]
+        public long id { get; set; }
         
         public long subscription_id { get; set; }
         public long user_id { get; set; }
