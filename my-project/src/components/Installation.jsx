@@ -4,89 +4,89 @@ export default function RequestInstallationModal({
   isOpen,
   onClose,
   installType,
-  onSubmit,
+  selectedPlanId, // ← new
+  selectedPlanName, // ← new
 }) {
+  // detect logged‑in user
+  const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+  const userId = storedUser?.id || null;
+
   // form state
   const [form, setForm] = useState({
     location: "",
-    subscription: "",
-    contact: "",
+    contact: "", // only for guests
   });
 
-  // options pulled from backend
+  // location options
   const [locOptions, setLocOptions] = useState([]);
-  const [planOptions, setPlanOptions] = useState([]);
-
-  // loading / error
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // map installType string to plan_type_id
-  const typeMap = {
-    Fiber: 1,
-    Residential: 2,
-    Corporate: 3,
-  };
+  // map installType → plan_type_id (if you still need)
+  const typeMap = { Fiber: 1, Residential: 2, Corporate: 3 };
   const typeId = typeMap[installType];
 
-  // Reset form & fetch options when modal opens or installType changes
+  // load locations when modal opens
   useEffect(() => {
     if (!isOpen) return;
-    setForm({ location: "", subscription: "", contact: "" });
-    setLoading(true);
-    setError("");
+    setForm({ location: "", contact: "" });
     setLocOptions([]);
-    setPlanOptions([]);
+    setError("");
+    setLoading(true);
 
-    // 1️⃣ fetch coverage locations
-    // 2️⃣ fetch plans of that type
-    async function loadOptions() {
+    (async () => {
       try {
-        // fetch all coverage, then filter by plan_type_id
-        const covResp = await fetch(
+        const cov = await fetch(
           `https://localhost:44325/coverage/type/${typeId}`
         );
-        if (!covResp.ok) throw new Error(`Coverage HTTP ${covResp.status}`);
-        const locList = await covResp.json();
-        setLocOptions(locList.map((c) => c.location));
-
-        // fetch plans for this type
-        const planResp = await fetch(
-          `https://localhost:44325/plans/type/${typeId}`
-        );
-        if (!planResp.ok) throw new Error(`Plans HTTP ${planResp.status}`);
-        const plans = await planResp.json();
-        // map to whatever display string you need, here plan.name
-        setPlanOptions(plans.map((p) => p.name));
-      } catch (err) {
-        console.error("Failed to load options:", err);
-        setError("Unable to load form options. Please try again.");
+        if (!cov.ok) throw new Error("Failed to load locations");
+        const locData = await cov.json();
+        setLocOptions(locData.map((c) => c.location));
+      } catch {
+        setError("Could not load locations.");
       } finally {
         setLoading(false);
       }
-    }
-
-    loadOptions();
-  }, [isOpen, installType, typeId]);
+    })();
+  }, [isOpen, typeId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    onSubmit({ installType, ...form });
-    onClose();
+    setLoading(true);
+    setError("");
+
+    const payload = {
+      UserId: userId, // null for guests
+      Email: userId ? null : form.contact,
+
+      Location: form.location,
+      PlanId: selectedPlanId, // use prop
+    };
+
+    try {
+      const res = await fetch("https://localhost:44325/pendingrequests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed");
+      onClose();
+    } catch {
+      setError("Failed to submit request.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
-
   return (
     <>
-      {/* Overlay */}
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      {/* Modal */}
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
         <form
           onSubmit={handleSend}
@@ -96,12 +96,10 @@ export default function RequestInstallationModal({
             {installType} Installation
           </h3>
 
-          {loading && (
-            <p className="text-center text-white mb-4">Loading options…</p>
-          )}
+          {loading && <p className="text-center text-white mb-4">Loading…</p>}
           {error && <p className="text-center text-red-400 mb-4">{error}</p>}
 
-          {/* Type (read-only) */}
+          {/* Install Type */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-white">
               Type of Install
@@ -109,6 +107,17 @@ export default function RequestInstallationModal({
             <input
               type="text"
               value={installType}
+              readOnly
+              className="mt-1 text-white w-full px-3 py-2 border rounded bg-slate-700"
+            />
+          </div>
+
+          {/* Plan (read-only) */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-white">Plan</label>
+            <input
+              type="text"
+              value={selectedPlanName}
               readOnly
               className="mt-1 text-white w-full px-3 py-2 border rounded bg-slate-700"
             />
@@ -124,70 +133,51 @@ export default function RequestInstallationModal({
               value={form.location}
               onChange={handleChange}
               required
-              disabled={loading || !!error}
+              disabled={loading}
               className="mt-1 text-white w-full px-3 py-2 border rounded"
             >
               <option value="">Select a location</option>
-              {locOptions.map((loc, idx) => (
-                <option key={idx} value={loc}>
+              {locOptions.map((loc) => (
+                <option key={loc} value={loc}>
                   {loc}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Subscription */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-white">
-              Subscription
-            </label>
-            <select
-              name="subscription"
-              value={form.subscription}
-              onChange={handleChange}
-              required
-              disabled={loading || !!error}
-              className="mt-1 text-white w-full px-3 py-2 border rounded"
-            >
-              <option value="">Select a plan</option>
-              {planOptions.map((plan, idx) => (
-                <option key={idx} value={plan}>
-                  {plan}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Contact (only for guests) */}
+          {!userId && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-white">
+                Email or Phone
+              </label>
+              <input
+                name="contact"
+                value={form.contact}
+                onChange={handleChange}
+                type="text"
+                required
+                disabled={loading}
+                className="text-white mt-1 w-full px-3 py-2 border rounded"
+              />
+            </div>
+          )}
 
-          {/* Contact */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-white">
-              Email or Phone
-            </label>
-            <input
-              type="text"
-              name="contact"
-              value={form.contact}
-              onChange={handleChange}
-              required
-              className="text-white mt-1 w-full px-3 py-2 border rounded"
-            />
-          </div>
-
-          {/* Buttons */}
+          {/* Actions */}
           <div className="flex justify-end space-x-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-500 rounded hover:bg-gray-500 transition"
+              className="px-4 py-2 bg-slate-500 rounded hover:bg-gray-500"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading || !!error}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition disabled:opacity-50"
+              disabled={loading}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
             >
-              Send
+              Send Request
             </button>
           </div>
         </form>

@@ -152,11 +152,10 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
 
   // Which plans to show?
   const currentType = subs[0]?.plan_type_id;
-  const available = plans.filter((p) =>
+  const available =
     mode === "change"
-      ? p.plan_type_id === currentType
-      : p.plan_type_id !== currentType
-  );
+      ? plans.filter((p) => p.plan_type_id === currentType)
+      : plans;
 
   return (
     <main className="pt-24 px-4 bg-gray-50 min-h-screen">
@@ -219,41 +218,56 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
 
         {/* Plan form */}
         {(mode === "add" || mode === "change") && (
-          <form onSubmit={handleSubmit} className="mb-8 space-y-4">
-            <div className="grid md:grid-cols-3 gap-4">
-              {available.map((plan) => (
-                <label
-                  key={plan.id}
-                  className={`p-4 border-2 rounded cursor-pointer ${
-                    selectedPlanId === plan.id
-                      ? "border-indigo-500 bg-white shadow"
-                      : "border-transparent"
-                  }`}
+          <>
+            {mode === "change" && (
+              <p className="text-sm text-gray-600 mb-4">
+                You can only switch between plans of your current subscription
+                type. To choose a different type of installation, please{" "}
+                <button
+                  className="text-indigo-600 underline"
+                  onClick={() => setMode("add")}
                 >
-                  <input
-                    type="radio"
-                    name="plan"
-                    value={plan.id}
-                    checked={selectedPlanId === plan.id}
-                    onChange={() => setSelectedPlanId(plan.id)}
-                    className="sr-only"
-                  />
-                  <div>
-                    <div className="font-semibold">{plan.name}</div>
-                    <div className="text-gray-600">${plan.price}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-            >
-              {mode === "add"
-                ? "Request New Subscription"
-                : "Change Subscription"}
-            </button>
-          </form>
+                  request a new subscription
+                </button>
+                .
+              </p>
+            )}
+            <form onSubmit={handleSubmit} className="mb-8 space-y-4">
+              <div className="grid md:grid-cols-3 gap-4">
+                {available.map((plan) => (
+                  <label
+                    key={plan.id}
+                    className={`p-4 border-2 rounded cursor-pointer ${
+                      selectedPlanId === plan.id
+                        ? "border-indigo-500 bg-white shadow"
+                        : "border-transparent"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="plan"
+                      value={plan.id}
+                      checked={selectedPlanId === plan.id}
+                      onChange={() => setSelectedPlanId(plan.id)}
+                      className="sr-only"
+                    />
+                    <div>
+                      <div className="font-semibold">{plan.name}</div>
+                      <div className="text-gray-600">${plan.price}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+              >
+                {mode === "add"
+                  ? "Request New Subscription"
+                  : "Change Subscription"}
+              </button>
+            </form>
+          </>
         )}
 
         {statusMsg && (
@@ -265,17 +279,10 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
           isOpen={isModalOpen}
           onClose={closeModal}
           installType={installType}
-          locData={locData}
-          subsOptions={subsOptions}
-          onSubmit={(installData) => {
-            if (mode === "add") {
-              handleAdd(selectedPlanId, installData);
-            } else {
-              // for change, end the first sub and add new
-              handleChange(subs[0].subscriptionId, selectedPlanId, installData);
-            }
-            closeModal();
-          }}
+          selectedPlanId={selectedPlanId}
+          selectedPlanName={
+            plans.find((p) => p.id === selectedPlanId)?.name || ""
+          }
         />
       </div>
     </main>
