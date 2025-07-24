@@ -29,6 +29,8 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
   // modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [selectedPlanName, setSelectedPlanName] = useState("");
 
   const itemsPerPage = 3;
   const totalPages = Math.ceil(plans.length / itemsPerPage);
@@ -56,8 +58,11 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
   }, []);
 
   // open / close modal
-  const openModal = (type) => {
+  const openModal = (type, planId, planName) => {
     setInstallType(type);
+
+    setSelectedPlanId(planId);
+    setSelectedPlanName(planName);
     setIsModalOpen(true);
   };
   const closeModal = () => setIsModalOpen(false);
@@ -172,7 +177,7 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
                     ))}
                   </ul>
                   <button
-                    onClick={() => openModal("Fiber")}
+                    onClick={() => openModal("Fiber", plan.id, plan.name)}
                     className="w-full bg-pink-600 text-white py-2 rounded-md font-semibold hover:bg-pink-700 transition"
                   >
                     Select Plan
@@ -243,9 +248,8 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
         isOpen={isModalOpen}
         onClose={closeModal}
         installType={installType}
-        locData={locData}
-        subsOptions={subsOptions}
-        onSubmit={handleSubmit}
+        selectedPlanId={selectedPlanId}
+        selectedPlanName={selectedPlanName}
       />
     </>
   );

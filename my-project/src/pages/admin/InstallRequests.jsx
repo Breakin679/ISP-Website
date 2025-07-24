@@ -8,19 +8,51 @@ export default function InstallRequestsAdmin() {
     isOpen: false,
     request: null,
     serverId: "",
-    ipInput: "",
+    ipList: [], // ← now an array of { ip, isPublic }
     error: "",
   });
 
-  // Load pending requests
+  // 1) Load pending requests + enrich with plan details
   useEffect(() => {
-    fetch("https://localhost:44325/pendingrequests/incomplete")
-      .then((r) => r.json())
-      .then(setRequests)
-      .catch(() => {});
+    async function loadRequests() {
+      try {
+        const res = await fetch(
+          "https://localhost:44325/pendingrequests/incomplete"
+        );
+        const reqs = await res.json();
+
+        // get unique planIds
+        const planIds = [...new Set(reqs.map((r) => r.planId))];
+        // fetch each plan
+        const plans = await Promise.all(
+          planIds.map((id) =>
+            fetch(`https://localhost:44325/plans/${id}`).then((r) => r.json())
+          )
+        );
+        const planMap = {};
+        plans.forEach((p) => {
+          planMap[p.id] = {
+            name: p.name,
+            ipCount: p.public_ip_count,
+          };
+        });
+
+        // merge
+        const enriched = reqs.map((r) => ({
+          ...r,
+          planName: planMap[r.planId]?.name || "Unknown",
+          ipCount: planMap[r.planId]?.ipCount || 0,
+        }));
+
+        setRequests(enriched);
+      } catch (e) {
+        console.error("Error loading requests or plans", e);
+      }
+    }
+    loadRequests();
   }, []);
 
-  // Fetch servers when modal opens
+  // 2) Fetch servers when modal opens
   useEffect(() => {
     if (!modal.isOpen || !modal.request) return;
     const loc = modal.request.location;
@@ -31,40 +63,44 @@ export default function InstallRequestsAdmin() {
         setServersByLocation((prev) => ({ ...prev, [loc]: list }))
       )
       .catch(() => setServersByLocation((prev) => ({ ...prev, [loc]: [] })));
-  }, [modal.isOpen, modal.request]);
+  }, [modal.isOpen, modal.request, serversByLocation]);
 
-  const openModal = (req) =>
+  // open modal and init ipList to correct length
+  const openModal = (req) => {
+    const count = Math.max(req.ipCount, 1);
+    const rows = Array.from({ length: count }, () => ({
+      ip: "",
+      isPublic: false,
+    }));
     setModal({
       isOpen: true,
       request: req,
       serverId: "",
-      ipInput: "",
+      ipList: rows,
       error: "",
     });
+  };
 
   const closeModal = () =>
     setModal({
       isOpen: false,
       request: null,
       serverId: "",
-      ipInput: "",
+      ipList: [],
       error: "",
     });
 
+  // Approve handler
   const handleApprove = async () => {
-    const { request, serverId, ipInput } = modal;
-    if (!serverId || !ipInput.trim()) {
+    const { request, serverId, ipList } = modal;
+    // validate
+    if (!serverId || ipList.some((e) => !e.ip.trim())) {
       setModal((m) => ({
         ...m,
-        error: "Please select a server and provide IP addresses.",
+        error: "Please select a server and fill in every IP address field.",
       }));
       return;
     }
-
-    const ipList = ipInput
-      .split("\n")
-      .map((ip) => ip.trim())
-      .filter((ip) => ip.length > 0);
 
     try {
       const res = await fetch(
@@ -86,6 +122,7 @@ export default function InstallRequestsAdmin() {
     }
   };
 
+  // Reject handler
   const handleReject = async (id) => {
     if (!window.confirm("Reject and delete this request?")) return;
     await fetch(`https://localhost:44325/pendingrequests/${id}`, {
@@ -106,6 +143,8 @@ export default function InstallRequestsAdmin() {
                 "Requester",
                 "Location",
                 "Plan ID",
+                "Plan Name",
+                "# IPs",
                 "Requested",
                 "Actions",
               ].map((h) => (
@@ -125,6 +164,8 @@ export default function InstallRequestsAdmin() {
                 <td className="px-6 py-4">{r.userId ?? r.email}</td>
                 <td className="px-6 py-4">{r.location}</td>
                 <td className="px-6 py-4">{r.planId}</td>
+                <td className="px-6 py-4">{r.planName}</td>
+                <td className="px-6 py-4">{r.ipCount}</td>
                 <td className="px-6 py-4">
                   {new Date(r.requestedAt).toLocaleDateString()}
                 </td>
@@ -146,7 +187,7 @@ export default function InstallRequestsAdmin() {
             ))}
             {requests.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                   No pending requests.
                 </td>
               </tr>
@@ -167,11 +208,15 @@ export default function InstallRequestsAdmin() {
               <h2 className="text-xl font-semibold mb-4">
                 Approve Request #{modal.request.id}
               </h2>
-              <p className="mb-2">
+              <p className="mb-1">
                 <strong>Location:</strong> {modal.request.location}
               </p>
+              <p className="mb-1">
+                <strong>Plan:</strong> {modal.request.planName} (ID{" "}
+                {modal.request.planId})
+              </p>
               <p className="mb-4">
-                <strong>Plan ID:</strong> {modal.request.planId}
+                <strong>IPs to assign:</strong> {modal.request.ipCount}
               </p>
 
               <label className="block text-sm font-medium mb-1">
@@ -192,18 +237,42 @@ export default function InstallRequestsAdmin() {
                 ))}
               </select>
 
-              <label className="block text-sm font-medium mb-1">
-                Enter IP Addresses (one per line)
-              </label>
-              <textarea
-                value={modal.ipInput}
-                onChange={(e) =>
-                  setModal((m) => ({ ...m, ipInput: e.target.value }))
-                }
-                rows={5}
-                className="w-full border px-3 py-2 rounded mb-2 resize-none"
-                placeholder="e.g. 192.168.1.1"
-              />
+              <p className="mb-2 font-medium">Enter IP Addresses:</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto mb-2">
+                {modal.ipList.map((entry, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder={`IP #${idx + 1}`}
+                      value={entry.ip}
+                      onChange={(e) => {
+                        const ip = e.target.value;
+                        setModal((m) => {
+                          const ipList = [...m.ipList];
+                          ipList[idx] = { ...ipList[idx], ip };
+                          return { ...m, ipList };
+                        });
+                      }}
+                      className="flex-1 border px-2 py-1 rounded"
+                    />
+                    <label className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={entry.isPublic}
+                        onChange={(e) => {
+                          const isPublic = e.target.checked;
+                          setModal((m) => {
+                            const ipList = [...m.ipList];
+                            ipList[idx] = { ...ipList[idx], isPublic };
+                            return { ...m, ipList };
+                          });
+                        }}
+                      />
+                      Public?
+                    </label>
+                  </div>
+                ))}
+              </div>
 
               {modal.error && (
                 <p className="text-red-500 text-sm mt-1">{modal.error}</p>
