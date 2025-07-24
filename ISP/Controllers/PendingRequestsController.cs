@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Numerics;
+using System.Text.Json.Serialization;
 
 namespace ISP.Controllers
 {
@@ -54,7 +55,7 @@ ORDER BY requested_at DESC;
         /// POST /pendingrequests
         /// Inserts a new row with status='Pending'.
         /// </summary>
-        [HttpPost]
+       
         // PendingRequestsController.cs
         [HttpPost]
  public ActionResult<PendingRequest> Create([FromBody] AddPendingRequestDto dto)
@@ -96,10 +97,19 @@ ORDER BY requested_at DESC;
         /// POST /pendingrequests/{id}/complete
         /// Marks the given request as Done.
         /// </summary>
+        public class IpAddressInfo {
+            
+                public string IP { get; set; }        // property, not field
+                public bool isPublic { get; set; }        // property
+            
+
+        }
         public class ApproveDto
         {
             public long ServerId { get; set; }
-            public List<string> IPs { get; set; } = new();
+
+            [JsonPropertyName("ipAddresses")]
+            public List<IpAddressInfo> IPs { get; set; } = new();
         }
 
         [HttpPost("{id:long}/approve")]
@@ -136,8 +146,8 @@ ORDER BY requested_at DESC;
                 db.Execute(
                   @"INSERT INTO IPAddresses
              (ip_address, subscription_id, server_id, is_public, is_assigned, seen_at)
-            VALUES(@Ip, @SubId, @Srv, 0, 1, SYSUTCDATETIME());",
-                  new { Ip = ip, SubId = subId, Srv = dto.ServerId });
+            VALUES(@Ip, @SubId, @Srv, @Pub, 1, SYSUTCDATETIME());",
+                  new { Ip = ip.IP,Pub=ip.isPublic, SubId = subId, Srv = dto.ServerId },tx);
             }
 
             // 4) mark request as complete
@@ -148,6 +158,25 @@ ORDER BY requested_at DESC;
 
             tx.Commit();
             return NoContent();
+        }
+
+        [HttpDelete("{id:int}")]
+        public IActionResult Delete(int id)
+        {
+            using var db = Connection();
+            var sql = "DELETE FROM dbo.Pending_Requests WHERE id = @Id;";
+            var rowsAffected = db.Execute(sql, new { Id = id });
+
+            if (rowsAffected == 0)
+            {
+                return NotFound();
+            }
+            else
+            {
+                return NoContent();
+            }
+
+
         }
     }
 }
