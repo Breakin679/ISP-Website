@@ -42,7 +42,7 @@ namespace ISP.DataAccess
             db.Open();
 
             // example query — tailor to your needs
-            const string sql = "SELECT * FROM Plans WHERE plan_type_id = 1";
+            const string sql = "SELECT * FROM Plans ";
             return db.Query<Plan>(sql);
         }
     }

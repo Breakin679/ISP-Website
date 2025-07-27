@@ -4,6 +4,7 @@ using ISP.Models;
 using ISP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using System.Data;
 
 [ApiController]
@@ -138,20 +139,38 @@ public class SubscriptionController : ControllerBase
     [HttpDelete("{id:long}")]
     public IActionResult Remove(long id)
     {
-        var links = _subUserRepo.GetAll()
-                      .Where(su => su.subscription_id == id)
-                      .ToList();
-        foreach (var su in links)
-            _subUserRepo.Delete((int)su.subscription_id); // if you use timestamps, adjust this
+        // 1. Open a raw SqlConnection
+        using var db = new SqlConnection(_conn);
+        db.Open();
+        using var tx = db.BeginTransaction();
 
-        var sub = _subRepo.GetById((int)id);
-        if (sub == null)
+        // 2. Delete all SubscriptionUsers links for this subscription_id
+        db.Execute(
+            @"DELETE FROM dbo.SubscriptionUsers
+          WHERE subscription_id = @SubId;",
+            new { SubId = id },
+            transaction: tx
+        );
+
+        // 3. Soft‑end the Subscription itself
+        var rows = db.Execute(
+            @"UPDATE dbo.Subscription
+          SET end_date = SYSUTCDATETIME()
+          WHERE id = @SubId;",
+            new { SubId = id },
+            transaction: tx
+        );
+
+        if (rows == 0)
+        {
+            tx.Rollback();
             return NotFound();
+        }
 
-        sub.end_date = DateTime.UtcNow;
-        _subRepo.Update(sub);
+        tx.Commit();
         return NoContent();
     }
+
     public class ChangePlanDto
     {
         public int NewPlanId { get; set; }
