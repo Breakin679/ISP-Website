@@ -1,21 +1,23 @@
+// src/pages/Residential.jsx
 import React, { useEffect, useState } from "react";
-import { FaWifi, FaTv, FaGamepad } from "react-icons/fa";
+import { FaWifi, FaTv, FaGamepad, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 export default function Residential({ locData = {}, subsOptions = {} }) {
   const scrollToPlans = () => {
     const section = document.getElementById("Plans");
-    if (section)
-      section.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (section) section.scrollIntoView({ behavior: "smooth", block: "center" });
   };
+
   const [page, setPage] = useState(0);
-  const [plans, setPlans] = useState([]); // fetched plans
-  const [loading, setLoading] = useState(true); // loading flag
-  const [error, setError] = useState(null); // error message
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
   const itemsPerPage = 3;
   const totalPages = Math.ceil(plans.length / itemsPerPage);
@@ -23,13 +25,13 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
     page * itemsPerPage,
     page * itemsPerPage + itemsPerPage
   );
+
   useEffect(() => {
-    async function loadplans(params) {
+    async function loadPlans() {
       try {
         const resp = await fetch("https://localhost:44325/plans/type/2");
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        setPlans(data);
+        setPlans(await resp.json());
       } catch (err) {
         console.error("Failed to load plans:", err);
         setError("Unable to load plans. Please try again later.");
@@ -37,18 +39,38 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
         setLoading(false);
       }
     }
-    loadplans();
+    loadPlans();
   }, []);
 
-  const openModal = (type) => {
+  const openModal = (type, plan) => {
     setInstallType(type);
+    setSelectedPlan(plan);
     setIsModalOpen(true);
   };
-  const closeModal = () => setIsModalOpen(false);
-  const handleSubmit = (data) => {
-    console.log("Installation requested:", data);
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPlan(null);
+  };
+
+  const handleSubmit = async (installData) => {
+    const payload = {
+      plan_id: selectedPlan.id,
+      installType,
+      ...installData
+    };
+    console.log("Installation requested:", payload);
+    // Example POST—uncomment & adapt to your API:
+    /*
+    await fetch("https://localhost:44325/pendingrequests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    */
     setIsModalOpen(false);
   };
+
   if (loading) {
     return (
       <main className="pt-24 text-center">
@@ -77,7 +99,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
             and browse without limits.
           </p>
           <button
-            onClick={() => scrollToPlans()}
+            onClick={scrollToPlans}
             className="bg-white text-teal-600 font-semibold px-8 py-3 rounded-md shadow hover:bg-gray-100 transition"
           >
             View Plans
@@ -96,8 +118,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
                 Blazing Fast Speeds
               </h3>
               <p className="text-gray-600">
-                Enjoy speeds up to 500 Mbps to power all your devices
-                seamlessly.
+                Enjoy speeds up to 500 Mbps to power all your devices seamlessly.
               </p>
             </div>
             <div className="p-8 border rounded-lg shadow hover:shadow-lg transition text-center">
@@ -156,7 +177,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
                     ))}
                   </ul>
                   <button
-                    onClick={() => openModal("Residential")}
+                    onClick={() => openModal("Residential", plan)}
                     className="w-full bg-teal-600 text-white py-2 rounded-md font-semibold hover:bg-teal-700 transition"
                   >
                     Select Plan
@@ -185,10 +206,6 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
           <div className="space-y-4">
             {[
               {
-                q: "Is there a data cap?",
-                a: "No, all residential plans come with truly unlimited data.",
-              },
-              {
                 q: "Do I need a contract?",
                 a: "No long-term contracts—cancel any time with 30 days notice.",
               },
@@ -211,8 +228,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
             Want to check other Plans?
           </h2>
           <p className="text-lg mb-6 max-w-xl mx-auto">
-            Join thousands of homes and businesses enjoying fast, stable
-            internet.
+            Join thousands of homes and businesses enjoying fast, stable internet.
           </p>
           <div className="flex justify-center gap-4">
             <Link
@@ -236,6 +252,8 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
         isOpen={isModalOpen}
         onClose={closeModal}
         installType={installType}
+        selectedPlanId={selectedPlan?.id}
+        selectedPlanName={selectedPlan?.name}
         locData={locData}
         subsOptions={subsOptions}
         onSubmit={handleSubmit}

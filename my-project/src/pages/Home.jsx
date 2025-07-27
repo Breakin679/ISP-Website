@@ -1,35 +1,74 @@
-import React, { use, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { FaWifi, FaTv, FaGamepad } from "react-icons/fa";
 import RequestInstallationModal from "../components/Installation";
 import ReviewForm from "../components/ReviewForm";
 import useNavigateToSection from "../components/Functions";
 
 const Home = () => {
+  // State hooks (always called in same order)
   const [modalOpen, setModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
-  const [form, setForm] = useState({
-    location: "",
-    subscription: "",
-    contact: "",
-  });
+  const [form, setForm] = useState({ location: "", subscription: "", contact: "" });
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviews, setReviews] = useState([
-    {
-      name: "Sarah K.",
-      review: "The best internet provider I've ever had! Reliable and fast.",
-    },
-    {
-      name: "Mike D.",
-      review: "Great customer service and affordable plans. Highly recommend.",
-    },
-    {
-      name: "Lina M.",
-      review:
-        "Fiber network is super fast and stable. Perfect for my business.",
-    },
+    { name: "Sarah K.", review: "The best internet provider I've ever had! Reliable and fast." },
+    { name: "Mike D.", review: "Great customer service and affordable plans. Highly recommend." },
+    { name: "Lina M.", review: "Fiber network is super fast and stable. Perfect for my business." },
   ]);
   const [currentReview, setCurrentReview] = useState(0);
+  const [summaries, setSummaries] = useState({});
+  const [loadingSummaries, setLoadingSummaries] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
 
+  // Always call this hook before any early returns!
+  const navigateToSection = useNavigateToSection();
+
+  // Load plan summaries
+  useEffect(() => {
+    async function loadSummaries() {
+      try {
+        const types = [
+          { key: "Fiber", id: 1 },
+          { key: "Residential", id: 2 },
+          { key: "Corporate", id: 3 },
+        ];
+        const results = await Promise.all(
+          types.map(async ({ key, id }) => {
+            const res = await fetch(`https://localhost:44325/plans/summary/${id}`);
+            if (!res.ok) throw new Error(`Failed to fetch summary for ${key}`);
+            const json = await res.json();
+            return [key, json];
+          })
+        );
+        setSummaries(Object.fromEntries(results));
+      } catch (e) {
+        console.error(e);
+        setSummaryError("Failed to load plan summaries.");
+      } finally {
+        setLoadingSummaries(false);
+      }
+    }
+    loadSummaries();
+  }, []);
+
+  // Early returns after all hooks
+  if (loadingSummaries) {
+    return (
+      <main className="pt-24 text-center">
+        <p>Loading plan info…</p>
+      </main>
+    );
+  }
+  if (summaryError) {
+    return (
+      <main className="pt-24 text-center">
+        <p className="text-red-500">{summaryError}</p>
+      </main>
+    );
+  }
+
+  // Data and helper functions
   const locData = {
     Residential: ["----", "----", "----"],
     Corporate: ["----", "----", "----"],
@@ -40,91 +79,46 @@ const Home = () => {
     Corporate: ["Corporate Plan A", "Corporate Plan B"],
     Fiber: ["Fiber 500", "Fiber 1G", "Fiber 2G"],
   };
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const isLoggedIn = Boolean(user);
 
-  const openModal = (type) => {
-    setInstallType(type);
-    setForm({ location: "", subscription: "", contact: "" });
-    setModalOpen(true);
-  };
-
-  // Handle form submission
   const handleSubmit = (data) => {
     console.log(data);
     setModalOpen(false);
     alert("Installation request sent!");
   };
 
-  // Plans array with type property for correct modal opening
-  const plans = [
-    {
-      title: "Fiber Plan",
-      type: "Fiber",
-      price: "Starting $40 / month",
-      features: ["Up to 100 Mbps", "Unlimited Data", "24/7 Support"],
-    },
-    {
-      title: "Residential Plan",
-      type: "Residential",
-      price: "Starting $20 / month",
-      features: ["Up to 30 Mbps", "Unlimited Data", "24/7 Support"],
-    },
-    {
-      title: "Corporate Plan",
-      type: "Corporate",
-      price: "Starting $60 / month",
-      features: ["Up to 50 Mbps", "Unlimited Data", "Priority Support"],
-    },
-  ];
-
-  // Get user from localStorage
-  const user = (() => {
-    try {
-      return JSON.parse(localStorage.getItem("user"));
-    } catch {
-      return null;
-    }
-  })();
-  const isLoggedIn = !!user;
-
   const handleAddReview = (review) => {
     setReviews((prev) => [...prev, review]);
     setShowReviewForm(false);
-    setCurrentReview(reviews.length); // Go to the new review
+    setCurrentReview(reviews.length);
   };
 
   const handleScroll = (dir) => {
     setCurrentReview((prev) => {
-      if (dir === "left") return prev > 0 ? prev - 1 : reviews.length - 1;
-      if (dir === "right") return prev < reviews.length - 1 ? prev + 1 : 0;
+      const total = reviews.length;
+      if (dir === "left") return prev > 0 ? prev - 1 : total - 1;
+      if (dir === "right") return prev < total - 1 ? prev + 1 : 0;
       return prev;
     });
   };
 
-  // Helper to get 3 reviews for carousel
   const getThreeReviews = () => {
     const total = reviews.length;
     if (total === 0) return [];
-    if (total === 1) return [reviews[0]];
-    if (total === 2) {
-      // Duplicate to fill 3 slots
-      return [
-        reviews[(currentReview - 1 + total) % total],
-        reviews[currentReview],
-        reviews[(currentReview + 1) % total],
-      ];
-    }
+    if (total === 1) return [reviews[0], reviews[0], reviews[0]];
     return [
       reviews[(currentReview - 1 + total) % total],
       reviews[currentReview],
       reviews[(currentReview + 1) % total],
-    ];
+    ];  
   };
-  const navigateToSection = useNavigateToSection();
 
-  // now clickHandler is a simple wrapper you can reuse:
-  const clickHandler = (page, section) => {
-    navigateToSection(page, section);
-  };
+  const plans = [
+    { title: "Fiber Plan", type: "Fiber", summary: summaries.Fiber, icon: <FaWifi className="w-6 h-6 inline-block mr-2" /> },
+    { title: "Residential Plan", type: "Residential", summary: summaries.Residential, icon: <FaTv className="w-6 h-6 inline-block mr-2" /> },
+    { title: "Corporate Plan", type: "Corporate", summary: summaries.Corporate, icon: <FaGamepad className="w-6 h-6 inline-block mr-2" /> },
+  ];
 
   return (
     <main className="pt-14  bg-white text-gray-900">
@@ -199,33 +193,40 @@ const Home = () => {
         </section>
 
         {/* Plans & Pricing */}
-        <section id="plans" className="w-full py-16 px-4 text-center">
-          <h2 className="text-3xl font-bold mb-10">Plans & Pricing</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan, idx) => (
-              <div
-                key={idx}
-                className="p-6 border rounded shadow hover:shadow-lg transition"
+      <section id="plans" className="w-full py-16 px-4 text-center">
+        <h2 className="text-3xl font-bold mb-10">Plans & Pricing</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {plans.map(({ title, type, summary, icon }) => (
+            <div
+              key={type}
+              className="p-6 border rounded shadow hover:shadow-lg transition"
+            >
+              <h3 className="text-xl font-semibold mb-2">
+                {icon}
+                {title}
+              </h3>
+              <p className="text-3xl font-bold mb-4">
+                Starting ${summary.lowestPrice.toFixed(2)}/month
+              </p>
+              <ul className="mb-4 text-left list-disc list-inside">
+                <li>Up to {summary.highestSpeedMbps} Mbps</li>
+                <li>
+                  {summary.hasUnlimitedData
+                    ? "Unlimited Data"
+                    : `${summary.highestDataLimit} GB data limit`}
+                </li>
+                <li>24/7 Support</li>
+              </ul>
+              <button
+                className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+                onClick={() => navigateToSection(`/subscriptions/${type.toLowerCase()}`, "plans")}
               >
-                <h3 className="text-xl font-semibold mb-2">{plan.title}</h3>
-                <p className="text-3xl font-bold mb-4">{plan.price}</p>
-                <ul className="mb-4 text-left list-disc list-inside">
-                  {plan.features.map((f, i) => (
-                    <li key={i}>{f}</li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() =>
-                    clickHandler(`/Subscriptions/${plan.type}`, "plans")
-                  }
-                  className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
-                >
-                  View Plans
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
+                View Plans
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
 
         {/* Testimonials */}
         <section
