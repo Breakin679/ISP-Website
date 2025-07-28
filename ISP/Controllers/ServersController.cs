@@ -6,7 +6,16 @@ using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System.Data;
 
+public class ServerDTO
+{
+    public string Name { get; set; }
+
+    public int Bandwidth { get; set; } = 0; // in Mbps
+}
+
 namespace ISP.Controllers
+
+
 { 
 [ApiController]
 [Route("servers")]
@@ -33,12 +42,22 @@ public class ServersController : ControllerBase
         => CreatedAtAction(nameof(Get), new { id = _repo.Insert(s) }, s);
 
     [HttpPut("{id:int}")]
-    public IActionResult Update(int id, Server s)
+    public IActionResult Update(int id, ServerDTO s)
     {
-        if (_repo.GetById(id) is null) return NotFound();
-        s.id = id;
-        return _repo.Update(s) ? NoContent() : StatusCode(500);
-    }
+            var existing = _repo.GetById(id);
+            if (existing == null) return NotFound();
+
+            // Map only allowed fields
+            existing.name = s.Name;
+            existing.bandwidth = s.Bandwidth;
+
+
+
+
+
+            return _repo.Update(existing) ? NoContent()
+                                           : StatusCode(500, "Failed to update user.");
+        }
         /// <summary>
         /// GET /servers/location/{loc}
         /// Returns all servers whose Location column equals the provided loc.

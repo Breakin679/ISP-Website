@@ -2,15 +2,21 @@
 using ISP.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using Dapper;
+using Microsoft.Data.SqlClient;
 
 [ApiController]
 [Route("coverage")]
 public class CoverageController : ControllerBase
 {
     private readonly IRepository<Coverage> _repo;
-    public CoverageController(IRepository<Coverage> repo) => _repo = repo;
+    private readonly string _conn;
+    public CoverageController(IRepository<Coverage> repo, IConfiguration cfg) { _repo = repo;
+        _conn = cfg.GetConnectionString("MyISP")
+                      ?? throw new InvalidOperationException("Missing MyISP connection string");
+    }
 
-    [HttpGet] public ActionResult<IEnumerable<Coverage>> GetAll() => Ok(_repo.GetAll());
+    [HttpGet] public ActionResult<IEnumerable<Coverage>> GetAll() => Ok(_repo.GetAll().Where(x => x.Status == true));
     [HttpGet("locations")]
     public ActionResult GetAllLocations()
     {
@@ -60,7 +66,11 @@ public class CoverageController : ControllerBase
 
     [HttpPost]
     public ActionResult<long> Create(Coverage cov)
-        => CreatedAtAction(nameof(Get), new { id = _repo.Insert(cov) }, cov);
+    {
+        cov.Status = true;
+        CreatedAtAction(nameof(Get), new { id = _repo.Insert(cov) }, cov);
+        return Ok();
+    }
 
     [HttpPut("{id:int}")]
     public IActionResult Update(int id, Coverage cov)
@@ -70,7 +80,35 @@ public class CoverageController : ControllerBase
         return _repo.Update(cov) ? NoContent() : StatusCode(500);
     }
 
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id}")]
     public IActionResult Delete(int id)
-        => _repo.Delete(id) ? NoContent() : NotFound();
+    {
+        using (var connection = new SqlConnection(_conn))
+        {
+            connection.Open();
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    // Soft delete all servers under this coverage
+                    var updateServers = @"UPDATE Servers SET status = 0 WHERE coverage_id = @CoverageId";
+                    connection.Execute(updateServers, new { CoverageId = id }, transaction);
+
+                    // Soft delete the coverage itself
+                    var updateCoverage = @"UPDATE Coverage SET status = 0 WHERE id = @Id";
+                    connection.Execute(updateCoverage, new { Id = id }, transaction);
+
+                    transaction.Commit();
+                    return NoContent();
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return StatusCode(500, $"Error: {ex.Message}");
+                }
+            }
+        }
+    }
+
 }

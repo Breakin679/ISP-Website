@@ -12,6 +12,16 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;  
 using Microsoft.Extensions.Configuration;
 
+public class UpdateUserDto
+{
+    public string fn { get; set; }
+    public string ln { get; set; }
+    public string email { get; set; }
+    public string phone_number { get; set; }
+    public string role { get; set; }
+    public string? password_hash { get; set; }   // Optional: only set if the user wants a new password
+}
+
 
 namespace ISP.Controllers
 {
@@ -20,9 +30,9 @@ namespace ISP.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IRepository<Users> _repo;
-        private readonly IConfiguration _configuration; 
+        private readonly IConfiguration _configuration;
 
-        public UsersController(IRepository<Users> repo, IConfiguration configuration    )
+        public UsersController(IRepository<Users> repo, IConfiguration configuration)
         {
             _repo = repo;
             _configuration = configuration;
@@ -32,7 +42,7 @@ namespace ISP.Controllers
         [HttpGet]
         public ActionResult<IEnumerable<Users>> GetAll()
         {
-            var all = _repo.GetAll().ToList();
+            var all = _repo.GetAll().Where(x => x.deleted == false).ToList();
             // strip hashes
             all.ForEach(u => u.password_hash = null);
             return Ok(all);
@@ -94,7 +104,7 @@ namespace ISP.Controllers
             // lookup user by email
             var user = _repo
                 .GetAll()
-                .FirstOrDefault(u => u.email == creds.Email && u.password_hash==Hashfunction.ComputeSha1(creds.Password));
+                .FirstOrDefault(u => u.email == creds.Email && u.password_hash == Hashfunction.ComputeSha1(creds.Password));
             var jwtConfig = _configuration.GetSection("Jwt");
             var keyString = jwtConfig["Key"];
             if (string.IsNullOrEmpty(keyString))
@@ -129,26 +139,49 @@ namespace ISP.Controllers
 
             // success: strip hash and return
             user.password_hash = null;
-            return Ok( new { token, user });
+            return Ok(new { token, user });
         }
 
-        // PUT /users/{id}
         [HttpPut("{id:int}")]
-        public IActionResult Update(int id, Users u)
+        public IActionResult Update(int id, [FromBody] UpdateUserDto updated)
         {
-            if (_repo.GetById(id) == null) return NotFound();
-            u.id = id;
-            // if updating password, remember to hash it first:
-            if (!string.IsNullOrWhiteSpace(u.password_hash))
-            {
-                u.password_hash = Hashfunction.ComputeSha1(u.password_hash);
-            }
-            return _repo.Update(u) ? NoContent() : StatusCode(500);
+            var existing = _repo.GetById(id);
+            if (existing == null) return NotFound();
+
+            // Map only allowed fields
+            existing.fn = updated.fn;
+            existing.ln = updated.ln;
+            existing.role = updated.role;
+            existing.email = updated.email;
+            existing.phone_number = updated.phone_number;
+
+            
+
+           
+
+            return _repo.Update(existing) ? NoContent()
+                                           : StatusCode(500, "Failed to update user.");
         }
+
 
         // DELETE /users/{id}
         [HttpDelete("{id:int}")]
         public IActionResult Delete(int id)
-            => _repo.Delete(id) ? NoContent() : NotFound();
+        {
+            // 1. Fetch the existing user
+            var user = _repo.GetById(id);
+            if (user == null)
+                return NotFound();
+
+            // 2. Mark as deleted
+            user.deleted = true;      // assuming `deleted` is an int (0/1)
+
+            // 3. Persist update
+            var success = _repo.Update(user);
+            if (!success)
+                return StatusCode(500, "Failed to mark user as deleted.");
+
+            return NoContent();
+        }
     }
 }
