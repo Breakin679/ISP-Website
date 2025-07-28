@@ -9,12 +9,26 @@ const Home = () => {
   // State hooks (always called in same order)
   const [modalOpen, setModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
-  const [form, setForm] = useState({ location: "", subscription: "", contact: "" });
+  const [form, setForm] = useState({
+    location: "",
+    subscription: "",
+    contact: "",
+  });
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviews, setReviews] = useState([
-    { name: "Sarah K.", review: "The best internet provider I've ever had! Reliable and fast." },
-    { name: "Mike D.", review: "Great customer service and affordable plans. Highly recommend." },
-    { name: "Lina M.", review: "Fiber network is super fast and stable. Perfect for my business." },
+    {
+      name: "Sarah K.",
+      review: "The best internet provider I've ever had! Reliable and fast.",
+    },
+    {
+      name: "Mike D.",
+      review: "Great customer service and affordable plans. Highly recommend.",
+    },
+    {
+      name: "Lina M.",
+      review:
+        "Fiber network is super fast and stable. Perfect for my business.",
+    },
   ]);
   const [currentReview, setCurrentReview] = useState(0);
   const [summaries, setSummaries] = useState({});
@@ -35,7 +49,9 @@ const Home = () => {
         ];
         const results = await Promise.all(
           types.map(async ({ key, id }) => {
-            const res = await fetch(`https://localhost:44325/plans/summary/${id}`);
+            const res = await fetch(
+              `https://localhost:44325/plans/summary/${id}`
+            );
             if (!res.ok) throw new Error(`Failed to fetch summary for ${key}`);
             const json = await res.json();
             return [key, json];
@@ -111,13 +127,28 @@ const Home = () => {
       reviews[(currentReview - 1 + total) % total],
       reviews[currentReview],
       reviews[(currentReview + 1) % total],
-    ];  
+    ];
   };
 
   const plans = [
-    { title: "Fiber Plan", type: "Fiber", summary: summaries.Fiber, icon: <FaWifi className="w-6 h-6 inline-block mr-2" /> },
-    { title: "Residential Plan", type: "Residential", summary: summaries.Residential, icon: <FaTv className="w-6 h-6 inline-block mr-2" /> },
-    { title: "Corporate Plan", type: "Corporate", summary: summaries.Corporate, icon: <FaGamepad className="w-6 h-6 inline-block mr-2" /> },
+    {
+      title: "Fiber Plan",
+      type: "Fiber",
+      summary: summaries.Fiber,
+      icon: <FaWifi className="w-6 h-6 inline-block mr-2" />,
+    },
+    {
+      title: "Residential Plan",
+      type: "Residential",
+      summary: summaries.Residential,
+      icon: <FaTv className="w-6 h-6 inline-block mr-2" />,
+    },
+    {
+      title: "Corporate Plan",
+      type: "Corporate",
+      summary: summaries.Corporate,
+      icon: <FaGamepad className="w-6 h-6 inline-block mr-2" />,
+    },
   ];
 
   return (
@@ -135,9 +166,6 @@ const Home = () => {
             Lightning fast, reliable internet tailored for your home and
             businesses
           </p>
-          <button className="bg-white text-indigo-700 font-semibold px-6 py-3 rounded shadow hover:bg-gray-100 transition">
-            Get Started
-          </button>
         </section>
 
         {/* Services Overview */}
@@ -193,40 +221,45 @@ const Home = () => {
         </section>
 
         {/* Plans & Pricing */}
-      <section id="plans" className="w-full py-16 px-4 text-center">
-        <h2 className="text-3xl font-bold mb-10">Plans & Pricing</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {plans.map(({ title, type, summary, icon }) => (
-            <div
-              key={type}
-              className="p-6 border rounded shadow hover:shadow-lg transition"
-            >
-              <h3 className="text-xl font-semibold mb-2">
-                {icon}
-                {title}
-              </h3>
-              <p className="text-3xl font-bold mb-4">
-                Starting ${summary.lowestPrice.toFixed(2)}/month
-              </p>
-              <ul className="mb-4 text-left list-disc list-inside">
-                <li>Up to {summary.highestSpeedMbps} Mbps</li>
-                <li>
-                  {summary.hasUnlimitedData
-                    ? "Unlimited Data"
-                    : `${summary.highestDataLimit} GB data limit`}
-                </li>
-                <li>24/7 Support</li>
-              </ul>
-              <button
-                className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
-                onClick={() => navigateToSection(`/subscriptions/${type.toLowerCase()}`, "plans")}
+        <section id="plans" className="w-full py-16 px-4 text-center">
+          <h2 className="text-3xl font-bold mb-10">Plans & Pricing</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {plans.map(({ title, type, summary, icon }) => (
+              <div
+                key={type}
+                className="p-6 border rounded shadow hover:shadow-lg transition"
               >
-                View Plans
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
+                <h3 className="text-xl font-semibold mb-2">
+                  {icon}
+                  {title}
+                </h3>
+                <p className="text-3xl font-bold mb-4">
+                  Starting ${summary.lowestPrice.toFixed(2)}/month
+                </p>
+                <ul className="mb-4 text-left list-disc list-inside">
+                  <li>Up to {summary.highestSpeedMbps} Mbps</li>
+                  <li>
+                    {summary.hasUnlimitedData
+                      ? "Unlimited Data"
+                      : `${summary.highestDataLimit} GB data limit`}
+                  </li>
+                  <li>24/7 Support</li>
+                </ul>
+                <button
+                  className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+                  onClick={() =>
+                    navigateToSection(
+                      `/subscriptions/${type.toLowerCase()}`,
+                      "plans"
+                    )
+                  }
+                >
+                  View Plans
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Testimonials */}
         <section

@@ -1,13 +1,20 @@
 // src/pages/Residential.jsx
 import React, { useEffect, useState } from "react";
-import { FaWifi, FaTv, FaGamepad, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import {
+  FaWifi,
+  FaTv,
+  FaGamepad,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
 
 export default function Residential({ locData = {}, subsOptions = {} }) {
   const scrollToPlans = () => {
     const section = document.getElementById("Plans");
-    if (section) section.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (section)
+      section.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const [page, setPage] = useState(0);
@@ -57,7 +64,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
     const payload = {
       plan_id: selectedPlan.id,
       installType,
-      ...installData
+      ...installData,
     };
     console.log("Installation requested:", payload);
     // Example POST—uncomment & adapt to your API:
@@ -118,7 +125,8 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
                 Blazing Fast Speeds
               </h3>
               <p className="text-gray-600">
-                Enjoy speeds up to 500 Mbps to power all your devices seamlessly.
+                Enjoy speeds up to 500 Mbps to power all your devices
+                seamlessly.
               </p>
             </div>
             <div className="p-8 border rounded-lg shadow hover:shadow-lg transition text-center">
@@ -228,7 +236,8 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
             Want to check other Plans?
           </h2>
           <p className="text-lg mb-6 max-w-xl mx-auto">
-            Join thousands of homes and businesses enjoying fast, stable internet.
+            Join thousands of homes and businesses enjoying fast, stable
+            internet.
           </p>
           <div className="flex justify-center gap-4">
             <Link
