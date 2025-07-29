@@ -55,8 +55,7 @@ SELECT
 FROM Subscription s
 LEFT JOIN SubscriptionUsers su ON su.subscription_id = s.id
 LEFT JOIN Users u ON u.id = su.user_id
-ORDER BY s.id;
-";
+ORDER BY s.id;";
 
         var lookup = new Dictionary<long, SubscriptionWithUsersDto>();
 
@@ -90,13 +89,13 @@ SELECT
   s.server_id AS ServerId,
   u.id AS UserId,
   u.fn + ' ' + u.ln AS FullName,
+  su.is_primary AS IsPrimary,
   ip.ip_address AS Ip
 FROM Subscription s
 LEFT JOIN SubscriptionUsers su ON su.subscription_id = s.id
 LEFT JOIN Users u ON u.id = su.user_id
 LEFT JOIN IPAddresses ip ON ip.subscription_id = s.id
-ORDER BY s.id;
-";
+ORDER BY s.id;";
 
         var lookup = new Dictionary<long, SubscriptionWithUsersAndIpsDto>();
 
@@ -107,20 +106,38 @@ ORDER BY s.id;
                 if (!lookup.TryGetValue(sub.SubscriptionId, out var dto))
                 {
                     dto = sub;
-                    lookup[sub.SubscriptionId] = dto;
+                    lookup.Add(sub.SubscriptionId, dto);
                 }
-                if (user?.UserId > 0)
+
+                if (user != null && user.UserId > 0)
+                {
+                    // Add to users list
                     dto.Users.Add(user);
-                if (!string.IsNullOrWhiteSpace(ip?.Ip))
+                    // Assign primary when flagged
+                    if (user.IsPrimary)
+                        dto.PrimaryUser = user;
+                }
+
+                if (ip != null && !string.IsNullOrWhiteSpace(ip.Ip))
+                {
                     dto.Ips.Add(ip.Ip);
+                }
+
                 return dto;
             },
             splitOn: "UserId,Ip"
         );
 
+        // Ensure a primary user is always set
+        foreach (var dto in lookup.Values)
+        {
+            if (dto.PrimaryUser == null && dto.Users.Any())
+                dto.PrimaryUser = dto.Users.First();
+        }
+
         return Ok(lookup.Values);
     }
-    // POST /subscriptions/full
+
     [HttpPost("full")]
     public IActionResult CreateFull([FromBody] FullSubscriptionDto dto)
     {
@@ -128,20 +145,16 @@ ORDER BY s.id;
         db.Open();
         using var tx = db.BeginTransaction();
 
-        // 1️⃣ Create the subscription header
         var subSql = @"
-      INSERT INTO Subscription (plan_id, server_id, start_date)
-      VALUES (@PlanId, @ServerId, SYSUTCDATETIME());
-      SELECT CAST(SCOPE_IDENTITY() AS BIGINT);
-    ";
+INSERT INTO Subscription (plan_id, server_id, start_date)
+VALUES (@PlanId, @ServerId, SYSUTCDATETIME());
+SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
         var newSubId = db.ExecuteScalar<long>(subSql, dto, tx);
 
-        // 2️⃣ Link users
         var linkSql = @"
-      INSERT INTO SubscriptionUsers
-        (subscription_id, user_id, is_primary, added_at)
-      VALUES (@SubId, @UserId, @IsPrimary, SYSUTCDATETIME());
-    ";
+INSERT INTO SubscriptionUsers
+  (subscription_id, user_id, is_primary, added_at)
+VALUES (@SubId, @UserId, @IsPrimary, SYSUTCDATETIME());";
         foreach (var u in dto.UserIds)
         {
             db.Execute(linkSql, new
@@ -152,19 +165,17 @@ ORDER BY s.id;
             }, tx);
         }
 
-        // 3️⃣ Assign IPs
         var ipSql = @"
-      INSERT INTO IPAddresses
-        (subscription_id, ip_address,server_id, is_public, is_assigned, seen_at)
-      VALUES (@SubId, @Ip, @ServId,@IsPublic, 1, SYSUTCDATETIME());
-    ";
+INSERT INTO IPAddresses
+  (subscription_id, ip_address, server_id, is_public, is_assigned, seen_at)
+VALUES (@SubId, @Ip, @ServId, @IsPublic, 1, SYSUTCDATETIME());";
         foreach (var ip in dto.IpAddresses)
         {
             db.Execute(ipSql, new
             {
                 SubId = newSubId,
                 Ip = ip.Address,
-                ServId= dto.ServerId,
+                ServId = dto.ServerId,
                 IsPublic = ip.IsPublic
             }, tx);
         }
@@ -172,15 +183,7 @@ ORDER BY s.id;
         tx.Commit();
         return CreatedAtAction(nameof(GetDetails), new { }, null);
     }
-    public class FullSubscriptionDto
-    {
-        public long PlanId { get; set; }
-        public long ServerId { get; set; }
-        public long[] UserIds { get; set; }
-        public long PrimaryUserId { get; set; }
-        public IpAddressDto[] IpAddresses { get; set; }
-    }
-    // PUT /subscriptions/full/{id}
+
     [HttpPut("full/{id:long}")]
     public IActionResult UpdateFull(long id, [FromBody] FullSubscriptionDto dto)
     {
@@ -188,26 +191,25 @@ ORDER BY s.id;
         db.Open();
         using var tx = db.BeginTransaction();
 
-        // 1️⃣ Update header
         db.Execute(
-          @"UPDATE Subscription 
-        SET plan_id = @PlanId, server_id = @ServerId
-        WHERE id = @SubId;",
-          new { SubId = id, dto.PlanId, dto.ServerId },
-          tx
+            @"UPDATE Subscription
+SET plan_id = @PlanId, server_id = @ServerId
+WHERE id = @SubId;",
+            new { SubId = id, dto.PlanId, dto.ServerId },
+            tx
         );
 
-        // 2️⃣ Replace user links
         db.Execute(
-          "DELETE FROM SubscriptionUsers WHERE subscription_id = @SubId;",
-          new { SubId = id }, tx
+            "DELETE FROM SubscriptionUsers WHERE subscription_id = @SubId;",
+            new { SubId = id }, tx
         );
-        foreach (var u in dto.UserIds)
-        {
-            db.Execute ( @"
+        var linkSql = @"
 INSERT INTO SubscriptionUsers
   (subscription_id, user_id, is_primary, added_at)
-VALUES (@SubId, @UserId, @IsPrimary, SYSUTCDATETIME());",   new
+VALUES (@SubId, @UserId, @IsPrimary, SYSUTCDATETIME());";
+        foreach (var u in dto.UserIds)
+        {
+            db.Execute(linkSql, new
             {
                 SubId = id,
                 UserId = u,
@@ -215,19 +217,20 @@ VALUES (@SubId, @UserId, @IsPrimary, SYSUTCDATETIME());",   new
             }, tx);
         }
 
-        // 3️⃣ Replace IPs
         db.Execute(
-          "DELETE FROM IPAddresses WHERE subscription_id = @SubId;",
-          new { SubId = id }, tx
+            "DELETE FROM IPAddresses WHERE subscription_id = @SubId;",
+            new { SubId = id }, tx
         );
+        var ipSql = @"
+INSERT INTO IPAddresses
+  (subscription_id, server_id, ip_address, is_public, is_assigned, seen_at)
+VALUES (@SubId, @ServId, @Ip, @IsPublic, 1, SYSUTCDATETIME());";
         foreach (var ip in dto.IpAddresses)
         {
-            db.Execute(@"
-INSERT INTO IPAddresses
-(subscription_id, ip_address, is_public, is_assigned, seen_at)
-VALUES (@SubId, @Ip, @IsPublic, 1, SYSUTCDATETIME());", new
+            db.Execute(ipSql, new
             {
                 SubId = id,
+                ServId = dto.ServerId,
                 Ip = ip.Address,
                 IsPublic = ip.IsPublic
             }, tx);
@@ -237,13 +240,21 @@ VALUES (@SubId, @Ip, @IsPublic, 1, SYSUTCDATETIME());", new
         return NoContent();
     }
 
+    public class FullSubscriptionDto
+    {
+        public long PlanId { get; set; }
+        public long ServerId { get; set; }
+        public long[] UserIds { get; set; }
+        public long PrimaryUserId { get; set; }
+        public IpAddressDto[] IpAddresses { get; set; }
+    }
+
     public class IpAddressDto
     {
         public string Address { get; set; }
         public bool IsPublic { get; set; }
     }
 
-    // DTOs
     public class SubscriptionWithUsersDto
     {
         public long SubscriptionId { get; set; }
@@ -258,6 +269,7 @@ VALUES (@SubId, @Ip, @IsPublic, 1, SYSUTCDATETIME());", new
         public long SubscriptionId { get; set; }
         public long PlanId { get; set; }
         public long ServerId { get; set; }
+        public UserDto PrimaryUser { get; set; }
         public List<UserDto> Users { get; set; } = new();
         public List<string> Ips { get; set; } = new();
     }
@@ -266,6 +278,7 @@ VALUES (@SubId, @Ip, @IsPublic, 1, SYSUTCDATETIME());", new
     {
         public long UserId { get; set; }
         public string FullName { get; set; }
+        public bool IsPrimary { get; set; }
     }
 
     public class IpDto
