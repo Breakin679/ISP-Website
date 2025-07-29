@@ -58,6 +58,7 @@ builder.Services.AddSingleton<IPlansDataAccess, PlansDataAccess>();
 builder.Services.AddSingleton<IPlansService, PlansService>();
 
 
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "MyISP API", Version = "v1" });

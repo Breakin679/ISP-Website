@@ -2,6 +2,7 @@
 
 namespace ISP.Models
 {
+    [Table("Pending_Requests")]
     public class PendingRequest
     {
         [Key]

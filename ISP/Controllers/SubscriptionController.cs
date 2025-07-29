@@ -1,7 +1,6 @@
 ﻿using Dapper;
 using ISP.DataAccess.Interfaces;
 using ISP.Models;
-using ISP.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -19,8 +18,6 @@ public class SubscriptionController : ControllerBase
     private readonly ILogger<SubscriptionController> _logger;
     private readonly string _conn;
 
-
-
     public SubscriptionController(
         IRepository<Subscription> subRepo,
         IRepository<SubscriptionUser> subUserRepo,
@@ -29,8 +26,7 @@ public class SubscriptionController : ControllerBase
         IRepository<Coverage> coverageRepo,
         ILogger<SubscriptionController> logger,
         IConfiguration config
-
-        )
+    )
     {
         _subRepo = subRepo;
         _subUserRepo = subUserRepo;
@@ -40,226 +36,240 @@ public class SubscriptionController : ControllerBase
         _logger = logger;
         _conn = config.GetConnectionString("MyISP")
                     ?? throw new InvalidOperationException("Missing MyISP connection string");
-
-
     }
+
     private IDbConnection Connection() => new SqlConnection(_conn);
 
-
-    // GET /subscriptions/active/{userId}
-    [HttpGet("active/{userId:long}")]
-    public ActionResult GetActive(long userId)
+    [HttpGet]
+    public ActionResult<IEnumerable<SubscriptionWithUsersDto>> GetAll()
     {
-        var links = _subUserRepo.GetAll()
-                        .Where(su => su.user_id == userId)
-                        .Select(su => su.subscription_id);
+        using var db = Connection();
+        var sql = @"
+SELECT 
+  s.id AS SubscriptionId,
+  s.plan_id AS PlanId,
+  s.server_id AS ServerId,
+  s.start_date AS StartDate,
+  u.id AS UserId,
+  u.fn + ' ' + u.ln AS FullName
+FROM Subscription s
+LEFT JOIN SubscriptionUsers su ON su.subscription_id = s.id
+LEFT JOIN Users u ON u.id = su.user_id
+ORDER BY s.id;
+";
 
-        var subs = links.Select(id => _subRepo.GetById((int)id))
-                        .Where(s => s != null && (s.end_date == null || s.end_date > DateTime.UtcNow))
-                        .ToList();
+        var lookup = new Dictionary<long, SubscriptionWithUsersDto>();
 
-        var views = subs.Select(s =>
-        {
-            var plan = _planRepo.GetById((int)s.plan_id);
-            var srv = _serverRepo.GetById(s.server_id);
-            var cov = _coverageRepo.GetAll().FirstOrDefault(c => c.id == srv.coverage_id);
-
-            var location = cov.location ?? "Unknown";
-
-            return new
+        db.Query<SubscriptionWithUsersDto, UserDto, SubscriptionWithUsersDto>(
+            sql,
+            (sub, user) =>
             {
-                SubscriptionId = s.id,
-                StartDate = s.start_date,
-                EndDate = s.end_date,
-                PlanId = plan?.id ?? 0,
-                PlanTypeId = plan?.plan_type_id ?? 0,
-                PlanName = plan?.name,
-                PlanDesc = plan?.description_plan,
-                PlanPrice = plan?.price ?? 0,
-                ServerId = srv?.id ?? 0,
-                Location = location
-            };
-        }).ToList();
+                if (!lookup.TryGetValue(sub.SubscriptionId, out var dto))
+                {
+                    dto = sub;
+                    lookup.Add(sub.SubscriptionId, dto);
+                }
+                if (user?.UserId > 0)
+                    dto.Users.Add(user);
+                return dto;
+            },
+            splitOn: "UserId"
+        );
 
-        if (!views.Any())
-            return NotFound();
-
-        return Ok(views);
+        return Ok(lookup.Values);
     }
 
-    // POST /subscriptions
-    [HttpPost]
-    public ActionResult Add([FromBody] dynamic m)
+    [HttpGet("details")]
+    public ActionResult<IEnumerable<SubscriptionWithUsersAndIpsDto>> GetDetails()
     {
-        int planId = m.PlanId;
-        int serverId = m.ServerId;
-        long userId = m.UserId;
+        using var db = Connection();
+        var sql = @"
+SELECT
+  s.id AS SubscriptionId,
+  s.plan_id AS PlanId,
+  s.server_id AS ServerId,
+  u.id AS UserId,
+  u.fn + ' ' + u.ln AS FullName,
+  ip.ip_address AS Ip
+FROM Subscription s
+LEFT JOIN SubscriptionUsers su ON su.subscription_id = s.id
+LEFT JOIN Users u ON u.id = su.user_id
+LEFT JOIN IPAddresses ip ON ip.subscription_id = s.id
+ORDER BY s.id;
+";
 
-        var sub = new Subscription
-        {
-            plan_id = planId,
-            server_id = serverId,
-            start_date = DateTime.UtcNow
-        };
-        var newId = _subRepo.Insert(sub);
-        sub.id = (int)newId;
+        var lookup = new Dictionary<long, SubscriptionWithUsersAndIpsDto>();
 
-        var link = new SubscriptionUser
-        {
-            subscription_id = newId,
-            user_id = userId,
-            is_primary = true,
-            added_at = DateTime.UtcNow
-        };
-        _subUserRepo.Insert(link);
+        db.Query<SubscriptionWithUsersAndIpsDto, UserDto, IpDto, SubscriptionWithUsersAndIpsDto>(
+            sql,
+            (sub, user, ip) =>
+            {
+                if (!lookup.TryGetValue(sub.SubscriptionId, out var dto))
+                {
+                    dto = sub;
+                    lookup[sub.SubscriptionId] = dto;
+                }
+                if (user?.UserId > 0)
+                    dto.Users.Add(user);
+                if (!string.IsNullOrWhiteSpace(ip?.Ip))
+                    dto.Ips.Add(ip.Ip);
+                return dto;
+            },
+            splitOn: "UserId,Ip"
+        );
 
-        var plan = _planRepo.GetById(planId);
-        var srv = _serverRepo.GetById(serverId);
-        var cov = _coverageRepo.GetAll().FirstOrDefault(c => c.id == srv.coverage_id);
-
-        var location = cov.location ?? "Unknown";
-
-        var view = new
-        {
-            SubscriptionId = (int)newId,
-            StartDate = sub.start_date,
-            EndDate = sub.end_date,
-            PlanId = plan?.id ?? 0,
-            PlanName = plan?.name,
-            PlanDesc = plan?.description_plan,
-            PlanPrice = plan?.price ?? 0,
-            ServerId = srv?.id ?? 0,
-            Location = location
-        };
-
-        return CreatedAtAction(nameof(GetActive), new { userId }, view);
+        return Ok(lookup.Values);
     }
-
-    // DELETE /subscriptions/{id}
-    [HttpDelete("{id:long}")]
-    public IActionResult Remove(long id)
+    // POST /subscriptions/full
+    [HttpPost("full")]
+    public IActionResult CreateFull([FromBody] FullSubscriptionDto dto)
     {
-        // 1. Open a raw SqlConnection
-        using var db = new SqlConnection(_conn);
+        using var db = Connection();
         db.Open();
         using var tx = db.BeginTransaction();
 
-        // 2. Delete all SubscriptionUsers links for this subscription_id
-        db.Execute(
-            @"DELETE FROM dbo.SubscriptionUsers
-          WHERE subscription_id = @SubId;",
-            new { SubId = id },
-            transaction: tx
-        );
+        // 1️⃣ Create the subscription header
+        var subSql = @"
+      INSERT INTO Subscription (plan_id, server_id, start_date)
+      VALUES (@PlanId, @ServerId, SYSUTCDATETIME());
+      SELECT CAST(SCOPE_IDENTITY() AS BIGINT);
+    ";
+        var newSubId = db.ExecuteScalar<long>(subSql, dto, tx);
 
-        // 3. Soft‑end the Subscription itself
-        var rows = db.Execute(
-            @"UPDATE dbo.Subscription
-          SET end_date = SYSUTCDATETIME()
-          WHERE id = @SubId;",
-            new { SubId = id },
-            transaction: tx
-        );
-
-        if (rows == 0)
+        // 2️⃣ Link users
+        var linkSql = @"
+      INSERT INTO SubscriptionUsers
+        (subscription_id, user_id, is_primary, added_at)
+      VALUES (@SubId, @UserId, @IsPrimary, SYSUTCDATETIME());
+    ";
+        foreach (var u in dto.UserIds)
         {
-            tx.Rollback();
-            return NotFound();
+            db.Execute(linkSql, new
+            {
+                SubId = newSubId,
+                UserId = u,
+                IsPrimary = u == dto.PrimaryUserId
+            }, tx);
+        }
+
+        // 3️⃣ Assign IPs
+        var ipSql = @"
+      INSERT INTO IPAddresses
+        (subscription_id, ip_address,server_id, is_public, is_assigned, seen_at)
+      VALUES (@SubId, @Ip, @ServId,@IsPublic, 1, SYSUTCDATETIME());
+    ";
+        foreach (var ip in dto.IpAddresses)
+        {
+            db.Execute(ipSql, new
+            {
+                SubId = newSubId,
+                Ip = ip.Address,
+                ServId= dto.ServerId,
+                IsPublic = ip.IsPublic
+            }, tx);
+        }
+
+        tx.Commit();
+        return CreatedAtAction(nameof(GetDetails), new { }, null);
+    }
+    public class FullSubscriptionDto
+    {
+        public long PlanId { get; set; }
+        public long ServerId { get; set; }
+        public long[] UserIds { get; set; }
+        public long PrimaryUserId { get; set; }
+        public IpAddressDto[] IpAddresses { get; set; }
+    }
+    // PUT /subscriptions/full/{id}
+    [HttpPut("full/{id:long}")]
+    public IActionResult UpdateFull(long id, [FromBody] FullSubscriptionDto dto)
+    {
+        using var db = Connection();
+        db.Open();
+        using var tx = db.BeginTransaction();
+
+        // 1️⃣ Update header
+        db.Execute(
+          @"UPDATE Subscription 
+        SET plan_id = @PlanId, server_id = @ServerId
+        WHERE id = @SubId;",
+          new { SubId = id, dto.PlanId, dto.ServerId },
+          tx
+        );
+
+        // 2️⃣ Replace user links
+        db.Execute(
+          "DELETE FROM SubscriptionUsers WHERE subscription_id = @SubId;",
+          new { SubId = id }, tx
+        );
+        foreach (var u in dto.UserIds)
+        {
+            db.Execute ( @"
+INSERT INTO SubscriptionUsers
+  (subscription_id, user_id, is_primary, added_at)
+VALUES (@SubId, @UserId, @IsPrimary, SYSUTCDATETIME());",   new
+            {
+                SubId = id,
+                UserId = u,
+                IsPrimary = u == dto.PrimaryUserId
+            }, tx);
+        }
+
+        // 3️⃣ Replace IPs
+        db.Execute(
+          "DELETE FROM IPAddresses WHERE subscription_id = @SubId;",
+          new { SubId = id }, tx
+        );
+        foreach (var ip in dto.IpAddresses)
+        {
+            db.Execute(@"
+INSERT INTO IPAddresses
+(subscription_id, ip_address, is_public, is_assigned, seen_at)
+VALUES (@SubId, @Ip, @IsPublic, 1, SYSUTCDATETIME());", new
+            {
+                SubId = id,
+                Ip = ip.Address,
+                IsPublic = ip.IsPublic
+            }, tx);
         }
 
         tx.Commit();
         return NoContent();
     }
 
-    public class ChangePlanDto
+    public class IpAddressDto
     {
-        public int NewPlanId { get; set; }
-        public string Email { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public string Location { get; set; } = string.Empty;
-    }
-    [HttpPost("{id:long}/change-plan")]
-    public IActionResult ChangePlan(long id, [FromBody] ChangePlanDto dto)
-    {
-        using var db = Connection();
-
-        db.Open();
-        using var tx = db.BeginTransaction();
-
-        // 1. Get current subscription
-        var current = _subRepo.GetById((int)id);
-        if (current == null)
-            return NotFound("Subscription not found");
-
-        // 2. Get current & new plan
-        var currentPlan = _planRepo.GetById((int)current.plan_id);
-        var newPlan = _planRepo.GetById(dto.NewPlanId);
-        if (newPlan == null)
-            return NotFound("New plan not found");
-
-        int currentPublicIPs = currentPlan.public_ip_count;
-        int newPublicIPs = newPlan.public_ip_count;
-
-        // 3. End current subscription
-        current.end_date = DateTime.UtcNow;
-        _subRepo.Update(current);
-
-        // Get user (assumes one user, primary)
-        var userLink = _subUserRepo.GetAll()
-            .FirstOrDefault(x => x.subscription_id == id && x.is_primary);
-        if (userLink == null)
-            return BadRequest("Subscription user link not found");
-
-        if (newPublicIPs != currentPublicIPs)
-        {
-            // 4. New installation request needed
-            var pending = new PendingRequest
-            {
-                UserId = userLink.user_id,
-                Email = dto.Email,
-                PhoneNumber = dto.Phone,
-                Location = dto.Location,
-                PlanId = dto.NewPlanId,
-                RequestedAt = DateTime.UtcNow,
-                Status = "Pending"
-            };
-            db.Execute(@"
-            INSERT INTO Pending_Requests (user_id, email, phone_number, location, plan_id, requested_at)
-            VALUES (@UserId, @Email, @PhoneNumber, @Location, @PlanId, SYSUTCDATETIME());
-        ", pending, tx);
-
-            tx.Commit();
-            return Ok(new { message = "Installation request created due to public IP increase" });
-        }
-
-        // 5. New subscription
-        var sub = new Subscription
-        {
-            plan_id = dto.NewPlanId,
-            server_id = current.server_id,
-            start_date = DateTime.UtcNow
-        };
-        var newId = _subRepo.Insert(sub);
-        sub.id = (int)newId;
-
-        // 6. Re-link user
-        _subUserRepo.Insert(new SubscriptionUser
-        {
-            subscription_id = newId,
-            user_id = userLink.user_id,
-            is_primary = true,
-            added_at = DateTime.UtcNow
-        });
-
-        // 7. Transfer IPs
-        db.Execute(@"
-        UPDATE IPAddresses
-        SET subscription_id = @NewId
-        WHERE subscription_id = @OldId;
-    ", new { NewId = newId, OldId = id }, tx);
-
-        tx.Commit();
-        return Ok(new { message = "Subscription changed", newSubId = newId });
+        public string Address { get; set; }
+        public bool IsPublic { get; set; }
     }
 
+    // DTOs
+    public class SubscriptionWithUsersDto
+    {
+        public long SubscriptionId { get; set; }
+        public long PlanId { get; set; }
+        public long ServerId { get; set; }
+        public DateTime StartDate { get; set; }
+        public List<UserDto> Users { get; set; } = new();
+    }
+
+    public class SubscriptionWithUsersAndIpsDto
+    {
+        public long SubscriptionId { get; set; }
+        public long PlanId { get; set; }
+        public long ServerId { get; set; }
+        public List<UserDto> Users { get; set; } = new();
+        public List<string> Ips { get; set; } = new();
+    }
+
+    public class UserDto
+    {
+        public long UserId { get; set; }
+        public string FullName { get; set; }
+    }
+
+    public class IpDto
+    {
+        public string Ip { get; set; }
+    }
 }
