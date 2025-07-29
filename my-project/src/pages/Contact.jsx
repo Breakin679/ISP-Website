@@ -2,61 +2,64 @@ import React, { useState } from "react";
 
 const ContactPage = () => {
   return (
-    <main className="mt-30 md:p-1 lg:p-14 text-gray-900 pb-20 min-h-screen flex items-center justify-center">
-      <div className="max-w-3xl w-full mx-auto py-6 px-2 sm:px-4 md:px-10 md:py-12 lg:px-20 lg:py-16 bg-gray-600/95 rounded-lg shadow-md">
-        <h2 className="text-2xl sm:text-3xl text-center text-indigo-400 font-bold mb-4 sm:mb-6 md:mb-10 lg:mb-14">
+    <main className="pt-24 pb-20 min-h-screen flex items-center justify-center bg-black/80">
+      <div className="w-full max-w-lg mx-auto bg-gray-900/850 rounded-2xl shadow-xl p-8">
+        <h2 className="text-3xl text-center text-indigo-400 font-extrabold mb-8">
           Contact Us
         </h2>
-        <form action="">
+        <p className="text-center text-gray-300 mb-6">
+          Need assistance? Call us at{" "}
+          <a href="tel:+1234567890" className="text-indigo-400 hover:underline">
+            +1 (234) 567-890
+          </a>{" "}
+          or email{" "}
+          <a
+            href="mailto:help@isp.com"
+            className="text-indigo-400 hover:underline"
+          >
+            help@isp.com
+          </a>
+        </p>
+        <form>
           <div className="mb-4">
-            <label
-              htmlFor=""
-              className="block text-white text-sm font-semibold mb-2 md:mb-4 lg:mb-6"
-            >
+            <label className="block text-gray-200 text-sm font-medium mb-2">
               Your Name
             </label>
             <input
               placeholder="Mary Jane"
-              className="w-full px-3 py-2 border rounded-lg bg-gray-500 focus:border-blue-500"
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-800 text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition"
               required
               type="text"
-            ></input>
+            />
           </div>
-          <div>
-            <label
-              className="block text-white text-sm font-semibold mb-2"
-              htmlFor=""
-            >
+          <div className="mb-4">
+            <label className="block text-gray-200 text-sm font-medium mb-2">
               Your Email
             </label>
             <input
               placeholder="mary@example.com"
-              className="w-full px-3 py-2 border rounded-lg bg-gray-500 focus:border-blue-500"
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-800 text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition"
               required
-              type="text"
-            ></input>
+              type="email"
+            />
           </div>
-          <div>
-            <label
-              className="block text-white text-sm font-semibold mb-2"
-              htmlFor=""
-            >
+          <div className="mb-6">
+            <label className="block text-gray-200 text-sm font-medium mb-2">
               Your Message
             </label>
             <textarea
-              rows="4"
+              rows="5"
               placeholder="Type your message here..."
-              className="w-full px-3 py-2 border rounded-lg bg-gray-500 focus:border-blue-500"
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-800 text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition"
               required
-              type="text"
-            ></textarea>
+            />
           </div>
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end">
             <button
               type="submit"
-              className="bg-indigo-400 text-white font-semibold px-4 py-1 rounded-lg hover:pink-700 focus:outline-blue-400"
+              className="bg-indigo-400 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition"
             >
-              Send
+              Send Message
             </button>
           </div>
         </form>

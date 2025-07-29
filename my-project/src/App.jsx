@@ -18,6 +18,7 @@ import ManageUsers from "./pages/admin/ManageUsers";
 import ManagePlans from "./pages/admin/ManagePlans";
 import InstallRequests from "./pages/admin/InstallRequests";
 import ManageServers from "./pages/admin/ServerCheck";
+import ManageSubscriptions from "./pages/admin/ManageSubscriptions";
 {
   /*import PrivateRoute from "./components/PrivateRoute";*/
 }
@@ -96,6 +97,14 @@ function App() {
           element={
             <AdminRoute>
               <ManagePlans />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/subscriptions"
+          element={
+            <AdminRoute>
+              <ManageSubscriptions />
             </AdminRoute>
           }
         />

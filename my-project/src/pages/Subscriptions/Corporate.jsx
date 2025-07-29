@@ -1,21 +1,81 @@
-import React from "react";
-import { FaBriefcase, FaNetworkWired, FaLifeRing } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import {
+  FaBriefcase,
+  FaNetworkWired,
+  FaLifeRing,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
+import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
-import { useState } from "react";
+import useNavigateToSection from "../../components/Functions";
 
 export default function Corporate({ locData = {}, subsOptions = {} }) {
+  const navigateToSection = useNavigateToSection();
+  const [hash] = useState(window.location.hash);
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [page, setPage] = useState(0);
+  const itemsPerPage = 3;
+  const totalPages = Math.ceil(plans.length / itemsPerPage);
+  const currentPlans = plans.slice(
+    page * itemsPerPage,
+    page * itemsPerPage + itemsPerPage
+  );
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
-  const openModal = (type) => {
+  useEffect(() => {
+    async function loadPlans() {
+      try {
+        const resp = await fetch("https://localhost:44325/plans/type/3");
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        setPlans(await resp.json());
+      } catch (err) {
+        console.error("Failed to load plans:", err);
+        setError("Unable to load plans. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPlans();
+  }, []);
+
+  const openModal = (type, plan) => {
     setInstallType(type);
+    setSelectedPlan(plan);
     setIsModalOpen(true);
   };
-  const closeModal = () => setIsModalOpen(false);
-  const handleSubmit = (data) => {
-    console.log("Corporate quote requested:", data);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPlan(null);
+  };
+  const handleSubmit = (installData) => {
+    const payload = {
+      plan_id: selectedPlan.id,
+      installType,
+      ...installData,
+    };
+    console.log("Installation requested:", payload);
     setIsModalOpen(false);
   };
+
+  if (loading)
+    return (
+      <main className="pt-24 text-center">
+        <p>Loading plans…</p>
+      </main>
+    );
+  if (error)
+    return (
+      <main className="pt-24 text-center">
+        <p className="text-red-500">{error}</p>
+      </main>
+    );
 
   return (
     <>
@@ -23,14 +83,16 @@ export default function Corporate({ locData = {}, subsOptions = {} }) {
         {/* Hero */}
         <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-20 px-6 text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4">
-            Enterprise &amp; Corporate Solutions
+            Enterprise & Corporate Solutions
           </h1>
           <p className="max-w-2xl mx-auto text-lg sm:text-xl mb-8">
             Tailored, high‑capacity internet and network services designed for
             large organizations.
           </p>
           <button
-            onClick={() => openModal("Corporate")}
+            onClick={() =>
+              navigateToSection("/subscriptions/corporate", "plansSection")
+            }
             className="bg-white text-indigo-700 font-semibold px-8 py-3 rounded-md shadow hover:bg-gray-100 transition"
           >
             Get a Quote
@@ -73,7 +135,7 @@ export default function Corporate({ locData = {}, subsOptions = {} }) {
           </div>
         </section>
 
-        {/* Use Cases */}
+        {/* Industry Use Cases */}
         <section className="bg-gray-100 py-16 px-4">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-8">
             Industries We Serve
@@ -94,6 +156,62 @@ export default function Corporate({ locData = {}, subsOptions = {} }) {
                 {industry}
               </span>
             ))}
+          </div>
+        </section>
+
+        {/* Plans & Pricing */}
+        <section id="plansSection" className="bg-gray-50 py-16 px-4 relative">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
+            Corporate Plans
+          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <button
+              onClick={() => setPage((p) => Math.max(p - 1, 0))}
+              disabled={page === 0}
+              className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50"
+            >
+              <FaChevronLeft />
+            </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-1">
+              {currentPlans.map((plan) => (
+                <div
+                  key={plan.id}
+                  className="p-6 bg-white rounded-lg shadow hover:shadow-xl transition"
+                >
+                  <h3 className="text-2xl font-semibold mb-2 text-center">
+                    {plan.name}
+                  </h3>
+                  <p className="text-4xl font-bold text-center mb-4">
+                    ${plan.price}/month
+                  </p>
+                  <p className="text-center text-gray-600 mb-2">
+                    {plan.bandwidth} Mbps
+                  </p>
+                  <p className="text-center text-gray-600 mb-4">
+                    Data Limit:{" "}
+                    {plan.data_limit >= 0
+                      ? `${plan.data_limit} GB`
+                      : "Unlimited"}
+                  </p>
+                  <button
+                    onClick={() => openModal("Corporate", plan)}
+                    className="w-full bg-indigo-600 text-white py-2 rounded-md font-semibold hover:bg-indigo-700 transition"
+                  >
+                    Select Plan
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
+              disabled={page === totalPages - 1}
+              className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50"
+            >
+              <FaChevronRight />
+            </button>
+          </div>
+          <div className="text-center text-sm text-gray-600">
+            Page {page + 1} of {totalPages}
           </div>
         </section>
 
@@ -126,14 +244,14 @@ export default function Corporate({ locData = {}, subsOptions = {} }) {
         {/* Call to Action */}
         <section className="text-center py-16 px-4">
           <p className="text-lg sm:text-xl mb-6">
-            Ready to elevate your business connectivity?
+            Looking for custom enterprise solutions?
           </p>
-          <button
-            onClick={() => openModal("Corporate")}
+          <Link
+            to="/contact"
             className="bg-indigo-600 text-white font-semibold px-8 py-3 rounded-md shadow hover:bg-indigo-700 transition"
           >
-            Request Corporate Quote
-          </button>
+            Contact Us
+          </Link>
         </section>
       </main>
 
@@ -142,6 +260,8 @@ export default function Corporate({ locData = {}, subsOptions = {} }) {
         isOpen={isModalOpen}
         onClose={closeModal}
         installType={installType}
+        selectedPlanId={selectedPlan?.id}
+        selectedPlanName={selectedPlan?.name}
         locData={locData}
         subsOptions={subsOptions}
         onSubmit={handleSubmit}

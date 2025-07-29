@@ -176,6 +176,13 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
                   <p className="text-center text-gray-600 mb-4">
                     {plan.bandwidth}Mbps
                   </p>
+                  <p className="text-center text-gray-600 mb-4">
+                    Data Limit:{" "}
+                    {plan.data_limit >= 0
+                      ? `${plan.data_limit}GB`
+                      : "Unlimited"}
+                  </p>
+
                   <ul className="mb-6 space-y-2">
                     {plan.perks?.map((f, idx) => (
                       <li key={idx} className="flex items-center">

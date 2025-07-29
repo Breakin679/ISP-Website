@@ -1,50 +1,101 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaUsers,
   FaClipboardList,
   FaTools,
   FaChartBar,
+  FaDollarSign,
+  FaServer,
   FaSignOutAlt,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 export default function AdminDashboard() {
-  const stats = { totalUsers: 1284, activeSubs: 867, pendingInstalls: 12 };
-  const recentInstalls = [
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeSubs: 0,
+    pendingInstalls: 0,
+    totalServers: 0,
+    totalPlans: 0,
+    totalBilling: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const res = await fetch("https://localhost:44325/admin/stats");
+        const data = await res.json();
+        setStats({
+          totalUsers: data.totalUsers,
+          activeSubs: data.activeSubscriptions,
+          pendingInstalls: data.pendingRequests,
+          totalServers: data.totalServers,
+          totalPlans: data.totalPlans,
+          totalBilling: data.totalBilling,
+        });
+      } catch (err) {
+        console.error("Failed to load dashboard data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="pt-24 px-6 text-center">
+        <p>Loading dashboard…</p>
+      </main>
+    );
+  }
+
+  const cards = [
     {
-      id: 1001,
-      user: "alice",
-      type: "Fiber",
-      date: "2025-07-10",
-      status: "Pending",
+      label: "Total Users",
+      value: stats.totalUsers,
+      icon: <FaUsers className="text-5xl text-indigo-600" />,
+      link: "/admin/users",
     },
     {
-      id: 1000,
-      user: "bob",
-      type: "Residential",
-      date: "2025-07-09",
-      status: "Completed",
+      label: "Active Subscriptions",
+      value: stats.activeSubs,
+      icon: <FaClipboardList className="text-5xl text-green-600" />,
+      link: "/admin/subscriptions",
     },
     {
-      id: 999,
-      user: "marc",
-      type: "Corporate",
-      date: "2025-07-08",
-      status: "In Progress",
+      label: "Pending Installs",
+      value: stats.pendingInstalls,
+      icon: <FaTools className="text-5xl text-yellow-600" />,
+      link: "/admin/installs",
+    },
+    {
+      label: "Total Servers",
+      value: stats.totalServers,
+      icon: <FaServer className="text-5xl text-blue-600" />,
+      link: "/admin/servers",
+    },
+    {
+      label: "Total Plans",
+      value: stats.totalPlans,
+      icon: <FaChartBar className="text-5xl text-purple-600" />,
+      link: "/admin/plans",
+    },
+    {
+      label: "Total Billing",
+      value: `$${stats.totalBilling.toLocaleString()}`,
+      icon: <FaDollarSign className="text-5xl text-teal-600" />,
+      link: "/admin/billing",
     },
   ];
-  const getStatusClasses = (status) => {
-    if (status === "Pending") return "bg-yellow-100 text-yellow-800";
-    if (status === "Completed") return "bg-green-100 text-green-800";
-    return "bg-blue-100 text-blue-800";
-  };
 
   return (
     <main className="pt-24 px-6 bg-gray-50 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <button
-          className="mt-4 md:mt-0 flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+          className="mt-4 md:mt-0 flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
           onClick={() => {
             localStorage.clear();
             window.location.href = "/";
@@ -54,102 +105,22 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white p-6 rounded-lg shadow flex items-center gap-4">
-          <FaUsers className="text-4xl text-indigo-600" />
-          <div>
-            <p className="text-sm text-gray-500">Total Users</p>
-            <p className="text-2xl font-semibold">{stats.totalUsers}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow flex items-center gap-4">
-          <FaClipboardList className="text-4xl text-green-600" />
-          <div>
-            <p className="text-sm text-gray-500">Active Subscriptions</p>
-            <p className="text-2xl font-semibold">{stats.activeSubs}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow flex items-center gap-4">
-          <FaTools className="text-4xl text-yellow-600" />
-          <div>
-            <p className="text-sm text-gray-500">Pending Installs</p>
-            <p className="text-2xl font-semibold">{stats.pendingInstalls}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <Link
-          to="/admin/users"
-          className="bg-white p-6 rounded-lg shadow hover:shadow-lg text-center transition"
-        >
-          <FaUsers className="text-3xl mb-2 text-indigo-600" />
-          <p>Manage Users</p>
-        </Link>
-        <Link
-          to="/admin/plans"
-          className="bg-white p-6 rounded-lg shadow hover:shadow-lg text-center transition"
-        >
-          <FaChartBar className="text-3xl mb-2 text-green-600" />
-          <p>Manage Plans</p>
-        </Link>
-        <Link
-          to="/admin/installs"
-          className="bg-white p-6 rounded-lg shadow hover:shadow-lg text-center transition"
-        >
-          <FaClipboardList className="text-3xl mb-2 text-yellow-600" />
-          <p>Install Requests</p>
-        </Link>
-        <Link
-          to="/admin/reports"
-          className="bg-white p-6 rounded-lg shadow hover:shadow-lg text-center transition"
-        >
-          <FaChartBar className="text-3xl mb-2 text-purple-600" />
-          <p>View Reports</p>
-        </Link>
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Request ID
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                User
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {recentInstalls.map((r) => (
-              <tr key={r.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{r.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{r.user}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{r.type}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{r.date}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClasses(
-                      r.status
-                    )}`}
-                  >
-                    {r.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 w-full max-w-5xl mx-auto">
+        {cards.map((c) => (
+          <Link
+            key={c.label}
+            to={c.link}
+            className="bg-white p-12 rounded-2xl shadow-md flex flex-col items-center justify-center hover:shadow-2xl transition-transform transform hover:scale-105 h-56"
+          >
+            {c.icon}
+            <p className="mt-4 text-xl font-semibold text-gray-800">
+              {c.label}
+            </p>
+            {c.value !== "" && (
+              <p className="mt-2 text-4xl font-bold text-gray-900">{c.value}</p>
+            )}
+          </Link>
+        ))}
       </div>
     </main>
   );

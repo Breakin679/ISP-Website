@@ -338,21 +338,15 @@ const Home = () => {
         <section id="coverage" className="w-full py-16 px-4 text-center">
           <h2 className="text-3xl font-bold mb-10">Check Your Coverage</h2>
           <p className="mb-4">
-            Enter your ZIP code or address to check availability.
+            Do you wanna know what installations we have at your location?
           </p>
-          <form className="max-w-sm mx-auto flex gap-2">
-            <input
-              type="text"
-              placeholder="ZIP code or address"
-              className="flex-grow px-4 py-2 border rounded-l focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="bg-indigo-600 text-white px-4 py-2 rounded-r hover:bg-indigo-700 transition"
-            >
-              Check
-            </button>
-          </form>
+
+          <button
+            onClick={() => navigateToSection(`/locations`, "main")}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-r hover:bg-indigo-700 transition"
+          >
+            Go to Coverages
+          </button>
         </section>
 
         {/* Contact CTA */}
@@ -365,7 +359,7 @@ const Home = () => {
             Questions? Issues? Our support team is here for you 24/7.
           </p>
           <Link
-            to="/contact"
+            to="/contact/#main"
             className="inline-block bg-indigo-800 text-white font-semibold px-8 py-4 rounded-full shadow hover:bg-gray-100 transition"
           >
             Contact Support
