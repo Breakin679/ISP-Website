@@ -52,13 +52,24 @@ export default function AdminSubscriptions() {
   const toggleUser = (uid) => {
     setForm((f) => {
       const exists = f.userIds.includes(uid);
-      const next = exists
-        ? f.userIds.filter((x) => x !== uid)
-        : [...f.userIds, uid];
-      // if you removed the primary, clear it
-      const primary =
-        exists && f.primaryUserId === uid ? null : f.primaryUserId;
-      return { ...f, userIds: next, primaryUserId: primary };
+      let nextIds = [];
+      let primary = f.primaryUserId;
+
+      if (exists) {
+        nextIds = f.userIds.filter((x) => x !== uid);
+        // if removing the primary, pick the next first user or clear
+        if (f.primaryUserId === uid) {
+          primary = nextIds.length > 0 ? nextIds[0] : null;
+        }
+      } else {
+        nextIds = [...f.userIds, uid];
+        // if no primary selected, set this as primary
+        if (!f.primaryUserId) {
+          primary = uid;
+        }
+      }
+
+      return { ...f, userIds: nextIds, primaryUserId: primary };
     });
   };
 
@@ -83,6 +94,12 @@ export default function AdminSubscriptions() {
     }));
 
   const handleSubmit = async () => {
+    // ensure primaryUserId is always valid when userIds exist
+    const payload = { ...form };
+    if (payload.userIds.length > 0 && !payload.primaryUserId) {
+      payload.primaryUserId = payload.userIds[0];
+    }
+
     const url = editId
       ? `https://localhost:44325/subscriptions/full/${editId}`
       : "https://localhost:44325/subscriptions/full";
@@ -91,7 +108,7 @@ export default function AdminSubscriptions() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error();
       // reset & reload
@@ -108,15 +125,13 @@ export default function AdminSubscriptions() {
 
   const startEdit = (sub) => {
     setEditId(sub.subscriptionId);
+    const userIds = sub.users.map((u) => u.userId);
     setForm({
       planId: sub.planId,
       serverId: sub.serverId,
-      userIds: sub.users.map((u) => u.userId),
-      primaryUserId: sub.users.length && sub.users[0].userId, // or find primary by flag if you add it
-      ipAddresses: sub.ips.map((ip) => ({
-        address: ip,
-        isPublic: false,
-      })),
+      userIds,
+      primaryUserId: userIds[0] || null,
+      ipAddresses: sub.ips.map((ip) => ({ address: ip, isPublic: false })),
     });
   };
 
@@ -233,105 +248,85 @@ export default function AdminSubscriptions() {
                     type="checkbox"
                     checked={ip.isPublic}
                     onChange={(e) => updateIp(i, "isPublic", e.target.checked)}
-                    className="mr-1"
-                  />
-                  Public
-                </label>
-                {i > 0 && (
-                  <button
-                    onClick={() => removeIpRow(i)}
-                    className="text-red-600"
-                  >
-                    <FaTimes />
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={addIpRow}
-              className="flex items-center gap-1 text-blue-600"
-            >
-              <FaPlus /> Add IP
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleSubmit}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex-1"
-            >
-              {editId ? (
-                <>
-                  <FaSave className="mr-2" /> Save
-                </>
-              ) : (
-                <>
-                  <FaPlus className="mr-2" /> Add
-                </>
-              )}
-            </button>
-            {editId && (
+                                      className="mr-1"
+                />
+                Public
+              </label>
               <button
-                onClick={() => {
-                  setEditId(null);
-                  setForm(emptyForm);
-                }}
-                className="bg-gray-300 px-4 py-2 rounded flex-1 hover:bg-gray-400"
+                onClick={() => removeIpRow(i)}
+                className="text-red-500 hover:text-red-700"
               >
-                Cancel
+                <FaTimes />
               </button>
-            )}
-          </div>
+            </div>
+          ))}
+          <button
+            onClick={addIpRow}
+            className="flex items-center gap-1 text-blue-500 hover:text-blue-700"
+          >
+            <FaPlus /> Add IP
+          </button>
         </div>
 
-        {/* Subscriptions Table */}
-        <table className="w-full table-auto">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2">ID</th>
-              <th>Plan</th>
-              <th>Server</th>
-              <th>Users</th>
-              <th>IPs</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {subs.map((sub) => (
-              <tr
-                key={sub.subscriptionId}
-                className="border-t hover:bg-gray-50"
+        <button
+          onClick={handleSubmit}
+          className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2"
+        >
+          <FaSave />
+          {editId ? "Update" : "Add"} Subscription
+        </button>
+      </div>
+
+      {/* List of subscriptions */}
+      <div className="space-y-4">
+        {subs.map((s) => (
+          <div
+            key={s.subscriptionId}
+            className="border p-4 rounded bg-white shadow flex flex-col sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p>
+                <strong>Plan:</strong>{" "}
+                {plans.find((p) => p.id === s.planId)?.name || "?"}
+              </p>
+              <p>
+                <strong>Server:</strong>{" "}
+                {servers.find((sv) => sv.id === s.serverId)?.name || "?"}
+              </p>
+              <p>
+                <strong>Users:</strong>{" "}
+                {s.users.map((u) => `${u.fullName}`).join(", ")}
+              </p>
+              <p>
+                <strong>Primary:</strong>{" "}
+                {
+                  s.users.find((u) => u.userId === s.primaryUserId)?.fullName ||
+                  "N/A"
+                }
+              </p>
+              <p>
+                <strong>IPs:</strong> {s.ips.join(", ")}
+              </p>
+            </div>
+            <div className="mt-2 sm:mt-0 flex gap-2">
+              <button
+                onClick={() => startEdit(s)}
+                className="text-blue-600 hover:text-blue-800"
               >
-                <td className="p-2">{sub.subscriptionId}</td>
-                <td className="p-2">
-                  {plans.find((p) => p.id === sub.planId)?.name}
-                </td>
-                <td className="p-2">
-                  {servers.find((s) => s.id === sub.serverId)?.name}
-                </td>
-                <td className="p-2">
-                  {sub.users.map((u) => u.fullName).join(", ")}
-                </td>
-                <td className="p-2">{sub.ips.join(", ")}</td>
-                <td className="p-2 flex gap-2">
-                  <button
-                    onClick={() => startEdit(sub)}
-                    className="text-blue-600"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(sub.subscriptionId)}
-                    className="text-red-600"
-                  >
-                    <FaTimes />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <FaEdit />
+              </button>
+              <button
+                onClick={() => handleDelete(s.subscriptionId)}
+                className="text-red-600 hover:text-red-800"
+              >
+                <FaTimes />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
       </div>
     </main>
-  );
-}
+      );
+}      
+
