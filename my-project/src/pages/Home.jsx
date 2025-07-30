@@ -359,7 +359,7 @@ const Home = () => {
             Questions? Issues? Our support team is here for you 24/7.
           </p>
           <Link
-            to="/contact/#main"
+            to="/contact"
             className="inline-block bg-indigo-800 text-white font-semibold px-8 py-4 rounded-full shadow hover:bg-gray-100 transition"
           >
             Contact Support

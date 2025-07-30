@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { FaEdit, FaTimes } from "react-icons/fa";
+import { FaEdit, FaTimes, FaKey, FaUnlock } from "react-icons/fa";
 import RequestInstallationModal from "../components/Installation";
 
 export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
-  const [subs, setSubs] = useState([]); // your active subs
-  const [plansByType, setPlansByType] = useState({}); // optional preload cache
+  const [subs, setSubs] = useState([]);
+  const [plansByType, setPlansByType] = useState({});
   const [addModal, setAddModal] = useState({
     isOpen: false,
     installType: "",
@@ -16,24 +16,36 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
     plans: [],
     selectedPlanId: null,
   });
+  const [accessModal, setAccessModal] = useState({
+    isOpen: false,
+    subscriptionId: null,
+    key: "",
+  });
   const [statusMsg, setStatusMsg] = useState("");
 
   const user = JSON.parse(localStorage.getItem("user")) || {};
   const userId = user.id;
   const jwt = localStorage.getItem("jwt") || "";
 
-  // 1) Load active subscriptions
+  // Load active subscriptions
   useEffect(() => {
     if (!userId) return;
     fetch(`https://localhost:44325/subscriptions/active/${userId}`, {
       headers: { Authorization: `Bearer ${jwt}` },
     })
       .then((r) => (r.status === 404 ? [] : r.json()))
-      .then(setSubs)
+      .then((list) =>
+        setSubs(
+          list.map((sub) => ({
+            ...sub,
+            subscriptionKey: sub.subscriptionKey || "",
+          }))
+        )
+      )
       .catch(() => setStatusMsg("Could not load subscriptions."));
   }, [userId, jwt]);
 
-  // 2) (Optional) preload each type’s plans
+  // Preload plans
   useEffect(() => {
     [1, 2, 3].forEach((typeId) => {
       fetch(`https://localhost:44325/plans/type/${typeId}`, {
@@ -45,18 +57,38 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
     });
   }, [jwt]);
 
-  // Helpers for Add
-  const openAdd = (type, planId) => {
+  // Add subscription
+  const openAdd = (type, planId) =>
     setAddModal({ isOpen: true, installType: type, planId });
-  };
   const closeAdd = () =>
     setAddModal({ isOpen: false, installType: "", planId: null });
+  const handleAdd = (installData) => {
+    const { planId } = addModal;
+    fetch("https://localhost:44325/subscriptions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({ userId, planId, serverId: installData.location }),
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then((newSub) =>
+        setSubs((s) => [
+          ...s,
+          { ...newSub, subscriptionKey: newSub.subscriptionKey || "" },
+        ])
+      )
+      .catch(() => setStatusMsg("Failed to add subscription."))
+      .finally(closeAdd);
+  };
 
-  // ■■■ Updated openChange: fetch same-type plans on demand ■■■
+  // Change plan
   const openChange = (sub) => {
-    console.log("sub:", sub);
-    const typeId = sub.planTypeId;
-    fetch(`https://localhost:44325/plans/type/${typeId}`, {
+    fetch(`https://localhost:44325/plans/type/${sub.planTypeId}`, {
       headers: { Authorization: `Bearer ${jwt}` },
     })
       .then((r) => {
@@ -80,29 +112,6 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
       plans: [],
       selectedPlanId: null,
     });
-
-  // Add handler
-  const handleAdd = (installData) => {
-    const { planId } = addModal;
-    const payload = { userId, planId, serverId: installData.location };
-    fetch("https://localhost:44325/subscriptions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${jwt}`,
-      },
-      body: JSON.stringify(payload),
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then((newSub) => setSubs((s) => [...s, newSub]))
-      .catch(() => setStatusMsg("Failed to add subscription."))
-      .finally(closeAdd);
-  };
-
-  // Change handler
   const handleChange = () => {
     const { subscription, selectedPlanId } = changeModal;
     fetch(
@@ -120,13 +129,18 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
         if (!r.ok) throw new Error();
         return r.json();
       })
-      .then((updatedSub) => {
+      .then((updatedSub) =>
         setSubs((prev) =>
           prev.map((s) =>
-            s.subscriptionId === updatedSub.subscriptionId ? updatedSub : s
+            s.subscriptionId === updatedSub.subscriptionId
+              ? {
+                  ...updatedSub,
+                  subscriptionKey: updatedSub.subscriptionKey || "",
+                }
+              : s
           )
-        );
-      })
+        )
+      )
       .catch(() => setStatusMsg("Failed to change subscription."))
       .finally(closeChange);
   };
@@ -144,11 +158,63 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
       .catch(() => setStatusMsg("Failed to unsubscribe."));
   };
 
+  // Generate key
+  const handleGenerateKey = async (subscriptionId) => {
+    try {
+      const res = await fetch(
+        `https://localhost:44325/subscriptions/${subscriptionId}/generate-key`,
+        { method: "POST", headers: { Authorization: `Bearer ${jwt}` } }
+      );
+      if (!res.ok) throw new Error();
+      const { key } = await res.json();
+      setSubs((prev) =>
+        prev.map((s) =>
+          s.subscriptionId === subscriptionId
+            ? { ...s, subscriptionKey: key }
+            : s
+        )
+      );
+    } catch {
+      setStatusMsg("Failed to generate key.");
+    }
+  };
+
+  // Request access
+  const openAccess = () =>
+    setAccessModal({ isOpen: true, subscriptionId: null, key: "" });
+  const closeAccess = () =>
+    setAccessModal({ isOpen: false, subscriptionId: null, key: "" });
+  const handleRequestAccess = () => {
+    fetch(`https://localhost:44325/subscriptions/validate-key`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({ KeyHash: accessModal.key, UserId: userId }),
+    })
+      .then((r) => setStatusMsg(r.ok ? "Access granted." : "Invalid key."))
+      .finally(closeAccess);
+  };
+
   return (
     <main className="pt-24 px-4 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-center">
         Manage Subscription
       </h1>
+
+      {/* Request access alone */}
+      <div className="max-w-3xl mx-auto mb-6">
+        <h2 className="text-xl font-semibold mb-2">
+          Request Access to a Subscription
+        </h2>
+        <button
+          onClick={openAccess}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Request Access
+        </button>
+      </div>
 
       {/* Active subscriptions */}
       <ul className="space-y-4 mb-12 max-w-3xl mx-auto">
@@ -157,30 +223,78 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
             key={s.subscriptionId}
             className="bg-white p-4 rounded shadow flex justify-between items-center"
           >
-            <div>
-              <div className="font-semibold">{s.planName}</div>
-              <div className="text-gray-500 text-sm">
-                {s.location} · Started{" "}
-                {new Date(s.startDate).toLocaleDateString()}
+            <div className="flex items-center gap-4">
+              <span className="font-mono text-sm text-gray-700">
+                {s.subscriptionKey}
+              </span>
+              <div>
+                <div className="font-semibold">{s.planName}</div>
+                <div className="text-gray-500 text-sm">
+                  {s.location} · Started{" "}
+                  {new Date(s.startDate).toLocaleDateString()}
+                </div>
               </div>
             </div>
             <div className="flex gap-2">
               <button
+                onClick={() => handleGenerateKey(s.subscriptionId)}
+                className="text-green-600 hover:underline flex items-center"
+              >
+                <FaKey className="mr-1" />
+                Generate Key
+              </button>
+              <button
                 onClick={() => openChange(s)}
                 className="text-indigo-600 hover:underline flex items-center"
               >
-                <FaEdit className="mr-1" /> Change
+                <FaEdit className="mr-1" />
+                Change
               </button>
               <button
                 onClick={() => handleUnsubscribe(s.subscriptionId)}
                 className="text-red-600 hover:underline flex items-center"
               >
-                <FaTimes className="mr-1" /> Cancel
+                <FaTimes className="mr-1" />
+                Cancel
               </button>
             </div>
           </li>
         ))}
       </ul>
+
+      {/* Access Key Modal */}
+      {accessModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">
+              Enter Subscription Key
+            </h2>
+            <input
+              type="text"
+              value={accessModal.key}
+              onChange={(e) =>
+                setAccessModal((m) => ({ ...m, key: e.target.value }))
+              }
+              className="w-full border rounded p-2 mb-4"
+              placeholder="Subscription Key"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeAccess}
+                className="px-4 py-2 bg-gray-300 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRequestAccess}
+                className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add new subscription */}
       <div className="max-w-3xl mx-auto space-y-12 mb-12">

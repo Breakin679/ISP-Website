@@ -1,4 +1,3 @@
-// src/pages/Residential.jsx
 import React, { useEffect, useState } from "react";
 import {
   FaWifi,
@@ -9,13 +8,12 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
+import useNavigateToSection from "../../components/Functions";
+import useScrollToHash from "../../hooks/useScrollToHash";
 
 export default function Residential({ locData = {}, subsOptions = {} }) {
-  const scrollToPlans = () => {
-    const section = document.getElementById("Plans");
-    if (section)
-      section.scrollIntoView({ behavior: "smooth", block: "center" });
-  };
+  useScrollToHash();
+  const navigateToSection = useNavigateToSection();
 
   const [page, setPage] = useState(0);
   const [plans, setPlans] = useState([]);
@@ -106,7 +104,9 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
             and browse without limits.
           </p>
           <button
-            onClick={scrollToPlans}
+            onClick={() =>
+              navigateToSection("/subscriptions/residential", "PlansSection")
+            }
             className="bg-white text-teal-600 font-semibold px-8 py-3 rounded-md shadow hover:bg-gray-100 transition"
           >
             View Plans
@@ -149,7 +149,7 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
         </section>
 
         {/* Plans & Pricing with pagination */}
-        <section id="Plans" className="bg-gray-50 py-16 px-4 relative">
+        <section id="PlansSection" className="bg-gray-50 py-16 px-4 relative">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
             Choose Your Plan
           </h2>

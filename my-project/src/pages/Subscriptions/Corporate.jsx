@@ -9,8 +9,10 @@ import {
 import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
 import useNavigateToSection from "../../components/Functions";
+import useScrollToHash from "../../hooks/useScrollToHash";
 
 export default function Corporate({ locData = {}, subsOptions = {} }) {
+  useScrollToHash();
   const navigateToSection = useNavigateToSection();
   const [hash] = useState(window.location.hash);
   const [plans, setPlans] = useState([]);
