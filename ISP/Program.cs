@@ -3,62 +3,65 @@ using ISP.DataAccess.Interfaces;
 using ISP.Models;
 using ISP.Services;
 using ISP.Services.Interfaces;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using Dapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// enable Dapper underscore↔camel mapping
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-var jwt = builder.Configuration
-    .GetSection("Jwt");
+var jwt = builder.Configuration.GetSection("Jwt");
 var key = Encoding.ASCII.GetBytes(jwt["Key"]!);
 
-builder.Services.AddAuthentication(options => { options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = true;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwt["Issuer"],
-        ValidAudience = jwt["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero
-    };
-});
+// 1️⃣ Authentication (JWT Bearer)
+builder.Services
+  .AddAuthentication(options =>
+  {
+      options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+      options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+  })
+  .AddJwtBearer(options =>
+  {
+      options.RequireHttpsMetadata = true;
+      options.SaveToken = true;
+      options.TokenValidationParameters = new TokenValidationParameters
+      {
+          ValidateIssuer = true,
+          ValidateAudience = true,
+          ValidateIssuerSigningKey = true,
+          ValidIssuer = jwt["Issuer"],
+          ValidAudience = jwt["Audience"],
+          IssuerSigningKey = new SymmetricSecurityKey(key),
+          ClockSkew = TimeSpan.Zero
+      };
+  });
 
-// 1. Add CORS services
+// 2️⃣ CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
         policy
-          .WithOrigins("*")   // your React app URL
+          .AllowAnyOrigin()   // or .WithOrigins("https://your-react-app")
           .AllowAnyHeader()
           .AllowAnyMethod();
     });
 });
-// 1) Add controllers
+
+// 3️⃣ Controllers
 builder.Services.AddControllers();
 
-// 2) Register your data‑access and service layers
-
+// 4️⃣ Data‑access & application services
 builder.Services.AddSingleton(typeof(IRepository<>), typeof(DapperRepository<>));
 builder.Services.AddSingleton<IPlansDataAccess, PlansDataAccess>();
 builder.Services.AddSingleton<IPlansService, PlansService>();
 
-
-
+// 5️⃣ Swagger / OpenAPI
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "MyISP API", Version = "v1" });
@@ -78,29 +81,35 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// 6️⃣ Authorization: subscription‑key policy
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("SubscriptionKeyValidated", policy =>
+        policy.RequireAssertion(context =>
+            context.User.HasClaim("subKeyValid", "true")
+        )
+    );
+});
+
 var app = builder.Build();
 
+// 7️⃣ Middleware pipeline
 
-app.UseRouting();
+// IMPORTANT: CORS must come *before* Authentication/Authorization and MapControllers
+app.UseCors(MyAllowSpecificOrigins);
 
-// IMPORTANT: UseCors before any endpoints
+app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
 
-
-// 4) Configure middleware – **no environment check**, so always enabled
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    // The JSON endpoint:
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "MyISP API v1");
-    // Serve Swagger UI at the app root (https://localhost:<port>/)
     c.RoutePrefix = string.Empty;
 });
 
-app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
 app.MapControllers();
-app.UseCors(MyAllowSpecificOrigins);
 
 app.Run();

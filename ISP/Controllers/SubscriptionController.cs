@@ -1,10 +1,13 @@
 ﻿using Dapper;
 using ISP.DataAccess.Interfaces;
 using ISP.Models;
+using ISP.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
+using System.Security.Cryptography;
 
 [ApiController]
 [Route("subscriptions")]
@@ -39,6 +42,57 @@ public class SubscriptionController : ControllerBase
     }
 
     private IDbConnection Connection() => new SqlConnection(_conn);
+    // GET /subscriptions/active/{userId}
+    [HttpGet("active/{userId:long}")]
+    public ActionResult GetActive(long userId)
+    {
+        // 1) find all subscription-user links for this user
+        var links = _subUserRepo.GetAll()
+                       .Where(su => su.user_id == userId)
+                        .Select(su => su.subscription_id);
+
+        var subs = links.Select(id => _subRepo.GetById((int)id))
+                        .Where(s => s != null && (s.end_date == null || s.end_date > DateTime.UtcNow))
+                        .ToList();
+
+        var views = subs.Select(s =>
+        {
+            var plan = _planRepo.GetById((int)s.plan_id);
+            var srv = _serverRepo.GetById(s.server_id);
+            var cov = _coverageRepo.GetAll().FirstOrDefault(c => c.id == srv.coverage_id);
+
+            var location = cov.location ?? "Unknown";
+
+            string keyHash;
+            using (var conn = Connection())
+            {
+                keyHash = conn.QuerySingleOrDefault<string>(
+                    "SELECT access_key_hash FROM SubscriptionAccessRequests WHERE subscription_id = @SubId",
+                    new { SubId = s.id }
+                );
+            }
+
+            return new
+            {
+                SubscriptionId = s.id,
+                StartDate = s.start_date,
+                EndDate = s.end_date,
+                PlanId = plan?.id ?? 0,
+                PlanName = plan?.name,
+                PlanDesc = plan?.description_plan,
+                PlanPrice = plan?.price ?? 0,
+                ServerId = srv?.id ?? 0,
+                Location = location,
+                SubscriptionKey = keyHash ?? string.Empty    // ← now included
+            };
+        }).ToList();
+
+        if (!views.Any())
+            return NotFound();
+
+        return Ok(views);
+    }
+
 
     [HttpGet]
     public ActionResult<IEnumerable<SubscriptionWithUsersDto>> GetAll()
@@ -183,6 +237,49 @@ VALUES (@SubId, @Ip, @ServId, @IsPublic, 1, SYSUTCDATETIME());";
         tx.Commit();
         return CreatedAtAction(nameof(GetDetails), new { }, null);
     }
+    // DELETE /subscriptions/{id}
+    [HttpDelete("{id:long}")]
+    public IActionResult DeleteFull(long id)
+    {
+        using var db = Connection();
+        db.Open();
+        using var tx = db.BeginTransaction();
+
+        // 1️⃣ Delete all IP assignments
+        var ipRows = db.Execute(
+            @"DELETE FROM IPAddresses
+          WHERE subscription_id = @SubId;",
+            new { SubId = id },
+            tx
+        );
+
+        // 2️⃣ Delete all user links
+        var linkRows = db.Execute(
+            @"DELETE FROM SubscriptionUsers
+          WHERE subscription_id = @SubId;",
+            new { SubId = id },
+            tx
+        );
+
+        // 3️⃣ Delete the subscription itself
+        var subRows = db.Execute(
+            @"DELETE FROM Subscription
+          WHERE id = @SubId;",
+            new { SubId = id },
+            tx
+        );
+
+        if (subRows == 0)
+        {
+            // nothing deleted => subscription not found
+            tx.Rollback();
+            return NotFound();
+        }
+
+        tx.Commit();
+        return NoContent();
+    }
+
 
     [HttpPut("full/{id:long}")]
     public IActionResult UpdateFull(long id, [FromBody] FullSubscriptionDto dto)
@@ -239,6 +336,67 @@ VALUES (@SubId, @ServId, @Ip, @IsPublic, 1, SYSUTCDATETIME());";
         tx.Commit();
         return NoContent();
     }
+   
+    
+    [HttpPost("{id:long}/generate-key")]
+    public ActionResult GenerateKey(long id)
+    {
+        // 1) create a cryptographically‐secure random key (e.g. 16 bytes => 32 hex chars)
+        var keyBytes = new byte[16];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(keyBytes);
+        var plainKey = BitConverter.ToString(keyBytes).Replace("-", "").ToLower(); // e.g. "9f2b4a..."
+
+        // 2) hash it (reuse your existing SHA1 or better yet SHA256)
+        var hash = Hashfunction.ComputeSha1(plainKey);
+
+        // 3) store the hash in your table
+        using var db = Connection();
+        var rows = db.Execute(
+            @"INSERT INTO SubscriptionAccessRequests
+            (access_key_hash,subscription_id,requested_at)
+         VALUES  (@Hash, @Id,SYSUTCDATETIME());",
+            new { Id = id, Hash = hash }
+        );
+
+        if (rows == 0)
+            return NotFound($"No subscription found with id {id}.");
+
+        // 4) return the plain key to the caller
+        return Ok(new { key = plainKey });
+    }
+    [HttpPost("validate-key")]
+    public IActionResult ValidateAccessKey( [FromBody] AccessDTO body)
+    {
+        if (string.IsNullOrEmpty(body.KeyHash) || body.UserId == 0)
+            return BadRequest("Missing keyHash or userId.");
+
+        using var db = Connection();
+        var storedHash = db.QuerySingleOrDefault<string>(
+            "SELECT access_key_hash FROM SubscriptionAccessRequests WHERE access_key_hash = @key",
+            new { key = body.KeyHash }
+        );
+            var subscription = db.QuerySingleOrDefault<string>(
+            "SELECT subscription_id FROM SubscriptionAccessRequests WHERE access_key_hash = @key",
+            new { key = body.KeyHash }
+        );
+
+        if (storedHash == null || !storedHash.Equals(body.KeyHash, StringComparison.OrdinalIgnoreCase))
+            return Unauthorized("Invalid key");
+
+        var rows = db.Execute(
+            @"INSERT INTO SubscriptionUsers (subscription_id, user_id, is_primary, added_at)
+          VALUES (@SubId, @UserId, 0, SYSUTCDATETIME());",
+            new { SubId = subscription, UserId = body.UserId }
+        );
+
+        if (rows == 0)
+            return StatusCode(500, "Failed to grant access.");
+
+        db.Execute("DELETE FROM SubscriptionAccessRequests WHERE subscription_id = @Id", new { Id = subscription });
+
+        return Ok(new { granted = true });
+    }
 
     public class FullSubscriptionDto
     {
@@ -280,9 +438,24 @@ VALUES (@SubId, @ServId, @Ip, @IsPublic, 1, SYSUTCDATETIME());";
         public string FullName { get; set; }
         public bool IsPrimary { get; set; }
     }
+    public class AccessDTO
+    {
+        public long UserId { get; set; }
+        public string KeyHash { get; set; }
+    }
 
     public class IpDto
     {
         public string Ip { get; set; }
     }
+    public class AccessRequestDto
+{
+  public long Id { get; set; }
+  public long SubscriptionId { get; set; }
+  public long UserId { get; set; }
+  public string Status { get; set; }
+  public DateTime RequestedAt { get; set; }
+  public DateTime? RespondedAt { get; set; }
+}
+
 }
