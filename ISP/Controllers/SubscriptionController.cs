@@ -1,4 +1,4 @@
-﻿using Dapper;
+﻿﻿﻿﻿using Dapper;
 using ISP.DataAccess.Interfaces;
 using ISP.Models;
 using ISP.Services;
@@ -66,10 +66,10 @@ public class SubscriptionController : ControllerBase
             string keyHash;
             using (var conn = Connection())
             {
-                keyHash = conn.QuerySingleOrDefault<string>(
-                    "SELECT access_key_hash FROM SubscriptionAccessRequests WHERE subscription_id = @SubId",
+                keyHash = conn.Query<string>(
+                    "SELECT access_key_hash FROM SubscriptionAccessRequests WHERE subscription_id = @SubId ORDER BY requested_at DESC",
                     new { SubId = s.id }
-                );
+                ).FirstOrDefault();
             }
 
             return new
@@ -82,6 +82,7 @@ public class SubscriptionController : ControllerBase
                 PlanDesc = plan?.description_plan,
                 PlanPrice = plan?.price ?? 0,
                 ServerId = srv?.id ?? 0,
+                PlanTypeId = plan?.plan_type_id?? 0,
                 Location = location,
                 SubscriptionKey = keyHash ?? string.Empty    // ← now included
             };
@@ -92,6 +93,93 @@ public class SubscriptionController : ControllerBase
 
         return Ok(views);
     }
+    [HttpPost("{id:long}/change-plan")]
+    public IActionResult ChangePlan(long id, [FromBody] ChangePlanDto dto)
+    {
+        
+
+        using var db = Connection();
+
+        // if user_id is BIGINT in the DB, use long; use int if it's INT
+        var userId = db.QuerySingleOrDefault<long?>(@"
+    SELECT user_id
+      FROM SubscriptionUsers
+     WHERE subscription_id = @SubId
+       AND is_primary = 1",
+            new { SubId = id }
+        );
+
+
+        var currentPlan = db.QuerySingleOrDefault<Plan>(
+    @"SELECT p.*
+        FROM [Subscription] AS s
+        INNER JOIN [Plans] AS p
+           ON s.plan_id = p.id
+       WHERE s.id = @SubId",
+    new { SubId = id }
+);
+
+
+        if (currentPlan == null)
+            return NotFound("Subscription not found");
+
+        // Get new plan details
+        var newPlan = db.QuerySingleOrDefault<Plan>(
+            "SELECT * FROM Plans WHERE id = @PlanId",
+            new { PlanId = dto.NewPlanId }
+        );
+
+        if (newPlan == null)
+            return NotFound("New plan not found");
+
+        // Check if new plan is same type as current plan
+        if (newPlan.plan_type_id != currentPlan.plan_type_id)
+            return BadRequest("New plan must be of the same plan type");
+
+        // Get IP count for current subscription
+        var currentIpCount = db.QuerySingleOrDefault<int>(
+            "SELECT COUNT(1) FROM IPAddresses WHERE subscription_id = @SubId",
+            new { SubId = id }
+        );
+        var location = db.QuerySingleOrDefault<string>(
+    @"SELECT c.location
+      FROM Subscription s
+      JOIN Servers srv ON s.server_id = srv.id
+      JOIN Coverage c ON srv.coverage_id = c.id
+     WHERE s.id = @SubId",
+    new { SubId = id }
+);
+        // Get IP count for new plan (assuming Plan has IpCount property or similar)
+        var newPlanIpCount = newPlan.public_ip_count; // Adjust property name as per your model
+
+        if (newPlanIpCount != currentIpCount)
+        {
+            // Insert into pending requests for IP change
+            db.Execute(
+                @"INSERT INTO Pending_Requests (location, plan_id, user_id, status, requested_at)
+              VALUES (@Location, @PlanId, @UserId, 'PENDING', SYSUTCDATETIME())",
+                new { Location= location,PlanId = dto.NewPlanId, UserId = userId }
+            );
+
+            return Ok(new { message = "IP count differs, pending request created" });
+        }
+        else
+        {
+            // Update subscription plan
+            var rows = db.Execute(
+                @"UPDATE Subscription SET plan_id = @PlanId WHERE id = @SubId",
+                new { SubId = id, PlanId = dto.NewPlanId }
+            );
+
+            if (rows == 0)
+                return NotFound("Subscription not found");
+
+            // Update IPs automatically if needed (implement as per your logic)
+
+            return Ok(new { subscriptionId = id, planId = dto.NewPlanId });
+        }
+    }
+
 
 
     [HttpGet]
@@ -366,34 +454,49 @@ VALUES (@SubId, @ServId, @Ip, @IsPublic, 1, SYSUTCDATETIME());";
         return Ok(new { key = plainKey });
     }
     [HttpPost("validate-key")]
-    public IActionResult ValidateAccessKey( [FromBody] AccessDTO body)
+    public IActionResult ValidateAccessKey([FromBody] AccessDTO body)
     {
         if (string.IsNullOrEmpty(body.KeyHash) || body.UserId == 0)
             return BadRequest("Missing keyHash or userId.");
 
         using var db = Connection();
-        var storedHash = db.QuerySingleOrDefault<string>(
-            "SELECT access_key_hash FROM SubscriptionAccessRequests WHERE access_key_hash = @key",
+        var record = db.Query<(string Hash, DateTime RequestedAt, long SubscriptionId)>(
+            @"SELECT access_key_hash, requested_at, subscription_id 
+              FROM SubscriptionAccessRequests 
+              WHERE access_key_hash = @key
+              ORDER BY requested_at DESC",
             new { key = body.KeyHash }
-        );
-            var subscription = db.QuerySingleOrDefault<string>(
-            "SELECT subscription_id FROM SubscriptionAccessRequests WHERE access_key_hash = @key",
-            new { key = body.KeyHash }
+        ).FirstOrDefault();
+
+        if (record.Hash == null || !record.Hash.Equals(body.KeyHash, StringComparison.OrdinalIgnoreCase))
+            return Unauthorized("Invalid key");
+
+        // Time limit for key validity in minutes
+        const int KeyTimeLimitMinutes = 60;
+
+        // Check if key is within time limit
+        if (DateTime.UtcNow > record.RequestedAt.AddMinutes(KeyTimeLimitMinutes))
+            return Unauthorized("Key expired");
+
+        // Prevent duplicate subscription-user link
+        var exists = db.QuerySingleOrDefault<int>(
+            @"SELECT COUNT(1) FROM SubscriptionUsers WHERE subscription_id = @SubId AND user_id = @UserId",
+            new { SubId = record.SubscriptionId, UserId = body.UserId }
         );
 
-        if (storedHash == null || !storedHash.Equals(body.KeyHash, StringComparison.OrdinalIgnoreCase))
-            return Unauthorized("Invalid key");
+        if (exists > 0)
+            return Conflict("User already has access to this subscription.");
 
         var rows = db.Execute(
             @"INSERT INTO SubscriptionUsers (subscription_id, user_id, is_primary, added_at)
           VALUES (@SubId, @UserId, 0, SYSUTCDATETIME());",
-            new { SubId = subscription, UserId = body.UserId }
+            new { SubId = record.SubscriptionId, UserId = body.UserId }
         );
 
         if (rows == 0)
             return StatusCode(500, "Failed to grant access.");
 
-        db.Execute("DELETE FROM SubscriptionAccessRequests WHERE subscription_id = @Id", new { Id = subscription });
+        db.Execute("DELETE FROM SubscriptionAccessRequests WHERE subscription_id = @Id", new { Id = record.SubscriptionId });
 
         return Ok(new { granted = true });
     }
@@ -457,5 +560,10 @@ VALUES (@SubId, @ServId, @Ip, @IsPublic, 1, SYSUTCDATETIME());";
   public DateTime RequestedAt { get; set; }
   public DateTime? RespondedAt { get; set; }
 }
+    public class ChangePlanDto
+    {
+        public long NewPlanId { get; set; }
+    }
+
 
 }
