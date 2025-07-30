@@ -34,14 +34,15 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
       headers: { Authorization: `Bearer ${jwt}` },
     })
       .then((r) => (r.status === 404 ? [] : r.json()))
-      .then((list) =>
-        setSubs(
-          list.map((sub) => ({
-            ...sub,
-            subscriptionKey: sub.subscriptionKey || "",
-          }))
-        )
-      )
+.then((list) =>
+  setSubs(
+    list.map((sub) => ({
+      ...sub,
+      subscriptionKey: sub.subscriptionKey || "",
+      planTypeId: sub.planTypeId ?? sub.PlanTypeId, // normalize casing
+    }))
+  )
+)
       .catch(() => setStatusMsg("Could not load subscriptions."));
   }, [userId, jwt]);
 
@@ -87,24 +88,29 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
   };
 
   // Change plan
-  const openChange = (sub) => {
-    fetch(`https://localhost:44325/plans/type/${sub.planTypeId}`, {
-      headers: { Authorization: `Bearer ${jwt}` },
+const openChange = (sub) => {
+  const planTypeId = sub.planTypeId;
+  if (!planTypeId) {
+    setStatusMsg("Plan type ID not available for this subscription.");
+    return;
+  }
+  fetch(`https://localhost:44325/plans/type/${planTypeId}`, {
+    headers: { Authorization: `Bearer ${jwt}` },
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error();
+      return r.json();
     })
-      .then((r) => {
-        if (!r.ok) throw new Error();
-        return r.json();
+    .then((list) =>
+      setChangeModal({
+        isOpen: true,
+        subscription: sub,
+        plans: list,
+        selectedPlanId: null,
       })
-      .then((list) =>
-        setChangeModal({
-          isOpen: true,
-          subscription: sub,
-          plans: list,
-          selectedPlanId: null,
-        })
-      )
-      .catch(() => setStatusMsg("Failed to load plans for change."));
-  };
+    )
+    .catch(() => setStatusMsg("Failed to load plans for change."));
+};
   const closeChange = () =>
     setChangeModal({
       isOpen: false,
