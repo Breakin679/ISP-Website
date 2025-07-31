@@ -136,9 +136,15 @@ export default function RequestInstallationModal({
               disabled={loading}
               className="mt-1 text-white w-full px-3 py-2 border rounded"
             >
-              <option value="">Select a location</option>
+              <option className="bg-slate-500 text-white" value="">
+                Select a location
+              </option>
               {locOptions.map((loc) => (
-                <option key={loc} value={loc}>
+                <option
+                  key={loc}
+                  value={loc}
+                  className="bg-slate-500 text-white"
+                >
                   {loc}
                 </option>
               ))}

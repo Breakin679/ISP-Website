@@ -6,13 +6,13 @@ export default function ManagePlans() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    price: 0.0, // decimal
+    price: 0.0,
     description_plan: "",
     plan_type_id: 4,
-    bandwidth: 0, // ← new
-    data_limit: 0, // ← new
-    limit_type: 0, // ← new (0–3)
-    public_ip_count: 0, // ← new
+    bandwidth: 0,
+    data_limit: 0,
+    limit_type: 0,
+    public_ip_count: 0,
   });
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -46,19 +46,20 @@ export default function ManagePlans() {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]:
-        name === "plan_type_id" ||
-        name === "bandwidth" ||
-        name === "data_limit" ||
-        name === "limit_type" ||
-        name === "public_ip_count"
-          ? parseInt(value, 10) || ""
-          : name === "price"
-          ? parseFloat(value) || ""
-          : value,
+      [name]: [
+        "plan_type_id",
+        "bandwidth",
+        "data_limit",
+        "limit_type",
+        "public_ip_count",
+      ].includes(name)
+        ? parseInt(value, 10) || ""
+        : name === "price"
+        ? parseFloat(value) || ""
+        : value,
     }));
   };
-  // NEW: preload form for editing
+
   const startEdit = (plan) => {
     setEditingId(plan.id);
     setForm({
@@ -78,12 +79,10 @@ export default function ManagePlans() {
     e.preventDefault();
     setLoading(true);
 
-    // choose URL + method based on edit vs add
     const url = editingId
       ? `https://localhost:44325/plans/${editingId}`
       : "https://localhost:44325/plans";
     const method = editingId ? "PUT" : "POST";
-
     const payload = {
       name: form.name,
       description_plan: form.description_plan,
@@ -97,12 +96,12 @@ export default function ManagePlans() {
 
     try {
       const res = await fetch(url, {
-        method, // dynamic
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Post error: ${res.status}`);
-      if (editingId) setEditingId(null);
+      setEditingId(null);
       setForm({
         name: "",
         price: 0.0,
@@ -116,7 +115,8 @@ export default function ManagePlans() {
       setShowForm(false);
       fetchPlans();
     } catch (err) {
-      console.error("Error adding plan:", err);
+      console.error("Error adding/updating plan:", err);
+      alert("Failed to save plan. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -128,10 +128,16 @@ export default function ManagePlans() {
       const res = await fetch(`https://localhost:44325/plans/${id}`, {
         method: "DELETE",
       });
+      if (res.status === 409) {
+        // 409 Conflict from backend when active subscriptions exist
+        alert("Cannot delete this plan: there are active subscriptions.");
+        return;
+      }
       if (!res.ok) throw new Error(`Delete error: ${res.status}`);
       setPlans((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
       console.error("Error deleting plan:", err);
+      alert("Failed to delete plan. Please try again.");
     }
   };
 
@@ -159,7 +165,7 @@ export default function ManagePlans() {
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <form onSubmit={handleSubmit} className="grid gap-4">
-            {/* Plan Name */}
+            {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Plan Name
@@ -190,7 +196,7 @@ export default function ManagePlans() {
               />
             </div>
 
-            {/* description_plan */}
+            {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Description
@@ -266,7 +272,7 @@ export default function ManagePlans() {
                 onChange={handleChange}
                 type="number"
                 min="-1"
-                max="1"
+                max="3"
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
                 required
               />

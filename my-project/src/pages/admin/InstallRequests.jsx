@@ -8,11 +8,11 @@ export default function InstallRequestsAdmin() {
     isOpen: false,
     request: null,
     serverId: "",
-    ipList: [], // ← now an array of { ip, isPublic }
+    ipList: [], // { ip, isPublic }
     error: "",
   });
 
-  // 1) Load pending requests + enrich with plan details
+  // 1) Load pending requests (now enriched by backend)
   useEffect(() => {
     async function loadRequests() {
       try {
@@ -20,33 +20,9 @@ export default function InstallRequestsAdmin() {
           "https://localhost:44325/pendingrequests/incomplete"
         );
         const reqs = await res.json();
-
-        // get unique planIds
-        const planIds = [...new Set(reqs.map((r) => r.planId))];
-        // fetch each plan
-        const plans = await Promise.all(
-          planIds.map((id) =>
-            fetch(`https://localhost:44325/plans/${id}`).then((r) => r.json())
-          )
-        );
-        const planMap = {};
-        plans.forEach((p) => {
-          planMap[p.id] = {
-            name: p.name,
-            ipCount: p.public_ip_count,
-          };
-        });
-
-        // merge
-        const enriched = reqs.map((r) => ({
-          ...r,
-          planName: planMap[r.planId]?.name || "Unknown",
-          ipCount: planMap[r.planId]?.ipCount || 0,
-        }));
-
-        setRequests(enriched);
+        setRequests(reqs);
       } catch (e) {
-        console.error("Error loading requests or plans", e);
+        console.error("Error loading requests", e);
       }
     }
     loadRequests();
@@ -65,9 +41,10 @@ export default function InstallRequestsAdmin() {
       .catch(() => setServersByLocation((prev) => ({ ...prev, [loc]: [] })));
   }, [modal.isOpen, modal.request, serversByLocation]);
 
-  // open modal and init ipList to correct length
+  // open modal
   const openModal = (req) => {
-    const count = Math.max(req.ipCount, 1);
+    // backend now gives publicIpCount
+    const count = Math.max(req.publicIpCount, 1);
     const rows = Array.from({ length: count }, () => ({
       ip: "",
       isPublic: false,
@@ -93,7 +70,6 @@ export default function InstallRequestsAdmin() {
   // Approve handler
   const handleApprove = async () => {
     const { request, serverId, ipList } = modal;
-    // validate
     if (!serverId || ipList.some((e) => !e.ip.trim())) {
       setModal((m) => ({
         ...m,
@@ -161,11 +137,13 @@ export default function InstallRequestsAdmin() {
             {requests.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{r.id}</td>
-                <td className="px-6 py-4">{r.userId ?? r.email}</td>
+                {/* now show the name, not userId */}
+                <td className="px-6 py-4">{r.requesterName}</td>
                 <td className="px-6 py-4">{r.location}</td>
-                <td className="px-6 py-4">{r.planId}</td>
+                {/* now show plan name, not planId */}
                 <td className="px-6 py-4">{r.planName}</td>
-                <td className="px-6 py-4">{r.ipCount}</td>
+                <td className="px-6 py-4">{r.planName}</td>
+                <td className="px-6 py-4">{r.publicIpCount}</td>
                 <td className="px-6 py-4">
                   {new Date(r.requestedAt).toLocaleDateString()}
                 </td>
@@ -212,11 +190,10 @@ export default function InstallRequestsAdmin() {
                 <strong>Location:</strong> {modal.request.location}
               </p>
               <p className="mb-1">
-                <strong>Plan:</strong> {modal.request.planName} (ID{" "}
-                {modal.request.planId})
+                <strong>Plan:</strong> {modal.request.planName}
               </p>
               <p className="mb-4">
-                <strong>IPs to assign:</strong> {modal.request.ipCount}
+                <strong>IPs to assign:</strong> {modal.request.publicIpCount}
               </p>
 
               <label className="block text-sm font-medium mb-1">

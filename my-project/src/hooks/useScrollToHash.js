@@ -1,10 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-/**
- * After navigation, watch the URL hash and scroll
- * to the matching element (retry until it exists).
- */
 export default function useScrollToHash() {
   const { hash } = useLocation();
 
