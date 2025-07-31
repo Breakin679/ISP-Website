@@ -1,11 +1,13 @@
 ﻿
+using Dapper;
+using Dapper.Contrib.Extensions;
+using ISP.DataAccess.Interfaces;
+using ISP.Models;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Dapper.Contrib.Extensions;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
-using ISP.DataAccess.Interfaces;
 
 namespace ISP.DataAccess
 {
@@ -54,10 +56,31 @@ namespace ISP.DataAccess
         {
             using var db = Connection();
             db.Open();
-            // need a dummy instance with Key = id
+
+            // If T is Plan, forbid deletion while any active subscription references it
+            if (typeof(T) == typeof(Plan))
+            {
+                const string sql = @"
+SELECT COUNT(1)
+  FROM Subscription
+ WHERE plan_id = @Id
+   AND (end_date IS NULL OR end_date > SYSUTCDATETIME());
+";
+                var activeCount = db.ExecuteScalar<int>(sql, new { Id = id });
+                if (activeCount > 0)
+                {
+                    // there are still active subscriptions on this plan
+                    return false;
+                }
+            }
+
+            // now fall back to the normal delete
             var existing = db.Get<T>(id);
-            if (existing == null) return false;
+            if (existing == null)
+                return false;
+
             return db.Delete(existing);
         }
+
     }
 }

@@ -28,34 +28,42 @@ namespace ISP.Controllers
         /// GET /pendingrequests/incomplete
         /// Returns all requests still marked Pending.
         /// </summary>
+
         [HttpGet("incomplete")]
-        public ActionResult<IEnumerable<PendingRequest>> GetAllIncomplete()
+        public ActionResult<IEnumerable<PendingRequestDto>> GetAllIncomplete()
         {
             using var db = Connection();
             var sql = @"
 SELECT
-  id,
-  user_id       AS UserId,
-  email,
-  phone_number  AS PhoneNumber,
-  location,
-  plan_id       AS PlanId,
-  requested_at  AS RequestedAt,
-  status,
-  processed_at  AS ProcessedAt
-FROM dbo.Pending_Requests
-WHERE status = @Status
-ORDER BY requested_at DESC;
+  r.id,
+  r.user_id                               AS UserId,
+  /* build a full name, or fallback to email */
+  COALESCE(u.fn + ' ' + u.ln, r.email)     AS RequesterName,
+  r.email,
+  r.phone_number                          AS PhoneNumber,
+  r.location,
+  r.plan_id                               AS PlanId,
+  p.name                                  AS PlanName,
+  p.public_ip_count                       AS PublicIpCount,
+  r.requested_at                          AS RequestedAt,
+  r.status,
+  r.processed_at                          AS ProcessedAt
+FROM dbo.Pending_Requests r
+LEFT JOIN dbo.Users  u ON u.id = r.user_id
+LEFT JOIN dbo.Plans  p ON p.id = r.plan_id
+WHERE r.status = @Status
+ORDER BY r.requested_at DESC;
 ";
-            var list = db.Query<PendingRequest>(sql, new { Status = "Pending" });
+            var list = db.Query<PendingRequestDto>(sql, new { Status = "Pending" });
             return Ok(list);
         }
+
 
         /// <summary>
         /// POST /pendingrequests
         /// Inserts a new row with status='Pending'.
         /// </summary>
-       
+
         // PendingRequestsController.cs
         [HttpPost]
  public ActionResult<PendingRequest> Create([FromBody] AddPendingRequestDto dto)
@@ -178,6 +186,22 @@ ORDER BY requested_at DESC;
 
 
         }
+        public class PendingRequestDto
+        {
+            public long Id { get; set; }
+            public long? UserId { get; set; }
+            public string? RequesterName { get; set; }  // new
+            public string? Email { get; set; }
+            public string? PhoneNumber { get; set; }
+            public string Location { get; set; }
+            public long PlanId { get; set; }
+            public string PlanName { get; set; }        // new
+            public int PublicIpCount { get; set; }      // new
+            public DateTime RequestedAt { get; set; }
+            public string Status { get; set; }
+            public DateTime? ProcessedAt { get; set; }
+        }
+
     }
 }
 

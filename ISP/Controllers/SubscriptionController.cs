@@ -348,14 +348,25 @@ VALUES (@SubId, @Ip, @ServId, @IsPublic, 1, SYSUTCDATETIME());";
             new { SubId = id },
             tx
         );
-
-        // 3️⃣ Delete the subscription itself
-        var subRows = db.Execute(
-            @"DELETE FROM Subscription
-          WHERE id = @SubId;",
+        // 2️⃣ Delete all user links
+        var requestRows = db.Execute(
+            @"DELETE FROM SubscriptionAccessRequests
+          WHERE subscription_id = @SubId;",
             new { SubId = id },
             tx
         );
+
+        // 3️⃣ Delete the subscription itself
+        var subRows = db.Execute(
+            @"
+        UPDATE Subscription
+           SET end_date = SYSUTCDATETIME()
+         WHERE id = @SubId;
+        ",
+            new { SubId = id },
+            tx
+        );
+
 
         if (subRows == 0)
         {
@@ -451,7 +462,7 @@ VALUES (@SubId, @ServId, @Ip, @IsPublic, 1, SYSUTCDATETIME());";
             return NotFound($"No subscription found with id {id}.");
 
         // 4) return the plain key to the caller
-        return Ok(new { key = plainKey });
+        return Ok(new { key = hash });
     }
     [HttpPost("validate-key")]
     public IActionResult ValidateAccessKey([FromBody] AccessDTO body)
