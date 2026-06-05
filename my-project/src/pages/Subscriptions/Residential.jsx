@@ -174,7 +174,8 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
                     ${plan.price}/month
                   </p>
                   <p className="text-center text-gray-600 mb-4">
-                    {plan.bandwidth}Mbps
+                    Speed:{" "}
+                    {plan.bandwidth>=0 ? `${plan.bandwidth} Mbps`: "Unlimited"}
                   </p>
                   <p className="text-center text-gray-600 mb-4">
                     Data Limit:{" "}
