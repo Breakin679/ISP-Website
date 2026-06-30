@@ -102,13 +102,8 @@ export default function ManagePlans() {
 
     try {
       const res = await fetch(url, {
-<<<<<<< Updated upstream
         method,
         headers: { "Content-Type": "application/json" },
-=======
-        method, // dynamic
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
->>>>>>> Stashed changes
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Post error: ${res.status}`);
