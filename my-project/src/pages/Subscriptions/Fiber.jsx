@@ -39,11 +39,13 @@ export default function Fiber({ locData = {}, subsOptions = {} }) {
     page * itemsPerPage + itemsPerPage
   );
 
+  const token = localStorage.getItem("token");
+
   // fetch plans once
   useEffect(() => {
     async function loadPlans() {
       try {
-        const resp = await fetch("https://localhost:44325/plans/type/1");
+        const resp = await fetch("https://localhost:44325/plans/type/1", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         setPlans(data);

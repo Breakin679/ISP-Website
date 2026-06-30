@@ -8,8 +8,22 @@ export default function RequestInstallationModal({
   selectedPlanName, // ← new
 }) {
   // detect logged‑in user
-  const storedUser = JSON.parse(localStorage.getItem("user") || "null");
-  const userId = storedUser?.id || null;
+      const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+    const userId = storedUser?.id || null;
+    const tokenRaw = localStorage.getItem("token");
+    let token = tokenRaw;
+    
+    // Handle case where token might be stored as JSON string of an object
+    if (tokenRaw && tokenRaw.startsWith('"') && tokenRaw.endsWith('"')) {
+      try {
+        token = JSON.parse(tokenRaw);
+      } catch (e) {
+        console.error("Failed to parse token:", e);
+      }
+    }
+    
+    console.log("Raw token from localStorage:", tokenRaw);
+    console.log("Processed token:", token);
 
   // form state
   const [form, setForm] = useState({
@@ -68,16 +82,35 @@ export default function RequestInstallationModal({
       PlanId: selectedPlanId, // use prop
     };
 
+    // Check if user is logged in
+    if (!userId || !token) {
+      setError("Please log in to submit an installation request.");
+      setLoading(false);
+      return;
+    }
+
+    // Debug: Log token info
+    console.log("Token:", token ? token.substring(0, 20) + "..." : "No token");
+    console.log("User ID:", userId);
+
     try {
       const res = await fetch("https://localhost:44325/pendingrequests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Failed");
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Response status:", res.status);
+        console.error("Response text:", errorText);
+        throw new Error(`Request failed: ${res.status} - ${errorText}`);
+      }
+      
       onClose();
-    } catch {
-      setError("Failed to submit request.");
+    } catch (err) {
+      console.error("Request error:", err);
+      setError("Failed to submit request: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -151,21 +184,12 @@ export default function RequestInstallationModal({
             </select>
           </div>
 
-          {/* Contact (only for guests) */}
+          {/* Login requirement */}
           {!userId && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-white">
-                Email or Phone
-              </label>
-              <input
-                name="contact"
-                value={form.contact}
-                onChange={handleChange}
-                type="text"
-                required
-                disabled={loading}
-                className="text-white mt-1 w-full px-3 py-2 border rounded"
-              />
+            <div className="mb-6 p-3 bg-yellow-600/20 border border-yellow-500 rounded">
+              <p className="text-yellow-300 text-sm">
+                Please log in to submit an installation request.
+              </p>
             </div>
           )}
 

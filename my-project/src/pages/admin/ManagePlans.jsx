@@ -17,9 +17,13 @@ export default function ManagePlans() {
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
+  const token = localStorage.getItem("token");
+
   const fetchPlans = async () => {
     try {
-      const res = await fetch("https://localhost:44325/plans/types");
+      const res = await fetch("https://localhost:44325/plans/types", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error(`Fetch error: ${res.status}`);
       setPlans(await res.json());
     } catch (err) {
@@ -29,7 +33,9 @@ export default function ManagePlans() {
 
   const fetchPlanTypes = async () => {
     try {
-      const res = await fetch("https://localhost:44325/plan-types");
+      const res = await fetch("https://localhost:44325/plan-types", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error(`Fetch types error: ${res.status}`);
       setPlanTypes(await res.json());
     } catch (err) {
@@ -96,8 +102,13 @@ export default function ManagePlans() {
 
     try {
       const res = await fetch(url, {
+<<<<<<< Updated upstream
         method,
         headers: { "Content-Type": "application/json" },
+=======
+        method, // dynamic
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+>>>>>>> Stashed changes
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Post error: ${res.status}`);
@@ -127,6 +138,7 @@ export default function ManagePlans() {
     try {
       const res = await fetch(`https://localhost:44325/plans/${id}`, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 409) {
         // 409 Conflict from backend when active subscriptions exist

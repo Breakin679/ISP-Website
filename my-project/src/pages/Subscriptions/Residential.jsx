@@ -31,10 +31,12 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
     page * itemsPerPage + itemsPerPage
   );
 
+  const token = localStorage.getItem("token");
+
   useEffect(() => {
     async function loadPlans() {
       try {
-        const resp = await fetch("https://localhost:44325/plans/type/2");
+        const resp = await fetch("https://localhost:44325/plans/type/2", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         setPlans(await resp.json());
       } catch (err) {

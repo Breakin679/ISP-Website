@@ -38,9 +38,18 @@ export default function AuthForm() {
       if (!res.ok) {
         throw new Error("Invalid credentials");
       }
-      const { token, user } = await res.json();
+      const response = await res.json();
+      console.log("Login response:", response);
+      const { token, user } = response;
+      console.log("Token type:", typeof token);
+      console.log("Token value:", token);
+      
+      // Ensure token is a string
+      const tokenString = typeof token === 'string' ? token : JSON.stringify(token);
+      console.log("Token string:", tokenString);
+      
       saveUser(user);
-      localStorage.setItem("token", token);
+      localStorage.setItem("token", tokenString);
       window.location.href = user.role === "admin" ? "/admin" : "/";
     } catch (err) {
       setError("Login failed: " + err.message);

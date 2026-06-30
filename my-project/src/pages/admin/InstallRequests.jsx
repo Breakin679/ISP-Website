@@ -12,15 +12,50 @@ export default function InstallRequestsAdmin() {
     error: "",
   });
 
+<<<<<<< Updated upstream
   // 1) Load pending requests (now enriched by backend)
+=======
+  const token = localStorage.getItem("token");
+
+  // 1) Load pending requests + enrich with plan details
+>>>>>>> Stashed changes
   useEffect(() => {
     async function loadRequests() {
       try {
         const res = await fetch(
-          "https://localhost:44325/pendingrequests/incomplete"
+          "https://localhost:44325/pendingrequests/incomplete",
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const reqs = await res.json();
+<<<<<<< Updated upstream
         setRequests(reqs);
+=======
+
+        // get unique planIds
+        const planIds = [...new Set(reqs.map((r) => r.planId))];
+        // fetch each plan
+        const plans = await Promise.all(
+          planIds.map((id) =>
+            fetch(`https://localhost:44325/plans/${id}`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json())
+          )
+        );
+        const planMap = {};
+        plans.forEach((p) => {
+          planMap[p.id] = {
+            name: p.name,
+            ipCount: p.public_ip_count,
+          };
+        });
+
+        // merge
+        const enriched = reqs.map((r) => ({
+          ...r,
+          planName: planMap[r.planId]?.name || "Unknown",
+          ipCount: planMap[r.planId]?.ipCount || 0,
+        }));
+
+        setRequests(enriched);
+>>>>>>> Stashed changes
       } catch (e) {
         console.error("Error loading requests", e);
       }
@@ -33,7 +68,7 @@ export default function InstallRequestsAdmin() {
     if (!modal.isOpen || !modal.request) return;
     const loc = modal.request.location;
     if (serversByLocation[loc]) return;
-    fetch(`https://localhost:44325/servers/location/${encodeURIComponent(loc)}`)
+    fetch(`https://localhost:44325/servers/location/${encodeURIComponent(loc)}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((list) =>
         setServersByLocation((prev) => ({ ...prev, [loc]: list }))
@@ -83,7 +118,7 @@ export default function InstallRequestsAdmin() {
         `https://localhost:44325/pendingrequests/${request.id}/approve`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ serverId, ipAddresses: ipList }),
         }
       );
@@ -103,6 +138,7 @@ export default function InstallRequestsAdmin() {
     if (!window.confirm("Reject and delete this request?")) return;
     await fetch(`https://localhost:44325/pendingrequests/${id}`, {
       method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
     });
     setRequests((prev) => prev.filter((r) => r.id !== id));
   };

@@ -25,13 +25,13 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
 
   const user = JSON.parse(localStorage.getItem("user")) || {};
   const userId = user.id;
-  const jwt = localStorage.getItem("jwt") || "";
+  const token = localStorage.getItem("token");
 
   // Load active subscriptions
   useEffect(() => {
     if (!userId) return;
     fetch(`https://localhost:44325/subscriptions/active/${userId}`, {
-      headers: { Authorization: `Bearer ${jwt}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.status === 404 ? [] : r.json()))
 .then((list) =>
@@ -44,25 +44,26 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
   )
 )
       .catch(() => setStatusMsg("Could not load subscriptions."));
-  }, [userId, jwt]);
+  }, [userId, token]);
 
   // Preload plans
   useEffect(() => {
     [1, 2, 3].forEach((typeId) => {
       fetch(`https://localhost:44325/plans/type/${typeId}`, {
-        headers: { Authorization: `Bearer ${jwt}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
         .then((r) => r.json())
         .then((pls) => setPlansByType((p) => ({ ...p, [typeId]: pls })))
         .catch(() => {});
     });
-  }, [jwt]);
+  }, [token]);
 
   // Add subscription
   const openAdd = (type, planId) =>
     setAddModal({ isOpen: true, installType: type, planId });
   const closeAdd = () =>
     setAddModal({ isOpen: false, installType: "", planId: null });
+<<<<<<< Updated upstream
   const handleAdd = (installData) => {
     const { planId } = addModal;
     fetch("https://localhost:44325/subscriptions", {
@@ -72,6 +73,15 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
         Authorization: `Bearer ${jwt}`,
       },
       body: JSON.stringify({ userId, planId, serverId: installData.location }),
+=======
+
+  // ■■■ Updated openChange: fetch same-type plans on demand ■■■
+  const openChange = (sub) => {
+    console.log("sub:", sub);
+    const typeId = sub.planTypeId;
+    fetch(`https://localhost:44325/plans/type/${typeId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+>>>>>>> Stashed changes
     })
       .then((r) => {
         if (!r.ok) throw new Error();
@@ -118,6 +128,32 @@ const openChange = (sub) => {
       plans: [],
       selectedPlanId: null,
     });
+<<<<<<< Updated upstream
+=======
+
+  // Add handler
+  const handleAdd = (installData) => {
+    const { planId } = addModal;
+    const payload = { userId, planId, serverId: installData.location };
+    fetch("https://localhost:44325/subscriptions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then((newSub) => setSubs((s) => [...s, newSub]))
+      .catch(() => setStatusMsg("Failed to add subscription."))
+      .finally(closeAdd);
+  };
+
+  // Change handler
+>>>>>>> Stashed changes
   const handleChange = () => {
     const { subscription, selectedPlanId } = changeModal;
     fetch(
@@ -126,7 +162,7 @@ const openChange = (sub) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ newPlanId: selectedPlanId }),
       }
@@ -155,7 +191,7 @@ const openChange = (sub) => {
   const handleUnsubscribe = (id) => {
     fetch(`https://localhost:44325/subscriptions/${id}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${jwt}` },
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => {
         if (!r.ok) throw new Error();
