@@ -63,7 +63,6 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
     setAddModal({ isOpen: true, installType: type, planId });
   const closeAdd = () =>
     setAddModal({ isOpen: false, installType: "", planId: null });
-<<<<<<< Updated upstream
   const handleAdd = (installData) => {
     const { planId } = addModal;
     fetch("https://localhost:44325/subscriptions", {
@@ -73,15 +72,6 @@ export default function ManageSubscription({ locData = {}, subsOptions = {} }) {
         Authorization: `Bearer ${jwt}`,
       },
       body: JSON.stringify({ userId, planId, serverId: installData.location }),
-=======
-
-  // ■■■ Updated openChange: fetch same-type plans on demand ■■■
-  const openChange = (sub) => {
-    console.log("sub:", sub);
-    const typeId = sub.planTypeId;
-    fetch(`https://localhost:44325/plans/type/${typeId}`, {
-      headers: { Authorization: `Bearer ${token}` },
->>>>>>> Stashed changes
     })
       .then((r) => {
         if (!r.ok) throw new Error();
