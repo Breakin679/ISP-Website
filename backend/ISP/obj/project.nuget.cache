@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "RO40GquTvAA=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\smmar\\OneDrive\\Documents\\GitHub\\ISP-Website\\backend\\ISP\\ISP.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\smmar\\.nuget\\packages\\microsoft.aspnetcore.openapi\\9.0.14\\microsoft.aspnetcore.openapi.9.0.14.nupkg.sha512",
+    "C:\\Users\\smmar\\.nuget\\packages\\microsoft.openapi\\1.6.17\\microsoft.openapi.1.6.17.nupkg.sha512"
+  ],
+  "logs": []
+}
