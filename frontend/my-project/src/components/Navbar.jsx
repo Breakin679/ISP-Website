@@ -170,7 +170,6 @@ const Navbar = () => {
                       onClick={() => {
                         localStorage.removeItem("user");
                         localStorage.removeItem("role");
-                        localStorage.removeItem("token");
                         setProfileOpen(false);
                         window.location.reload();
                       }}
