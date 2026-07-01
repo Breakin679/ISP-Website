@@ -128,8 +128,6 @@ const openChange = (sub) => {
       plans: [],
       selectedPlanId: null,
     });
-<<<<<<< Updated upstream
-=======
 
   // Add handler
   const handleAdd = (installData) => {
@@ -153,7 +151,6 @@ const openChange = (sub) => {
   };
 
   // Change handler
->>>>>>> Stashed changes
   const handleChange = () => {
     const { subscription, selectedPlanId } = changeModal;
     fetch(
