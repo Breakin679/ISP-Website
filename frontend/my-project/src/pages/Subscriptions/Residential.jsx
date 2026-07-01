@@ -8,8 +8,13 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import RequestInstallationModal from "../../components/Installation";
+<<<<<<< HEAD:frontend/my-project/src/pages/Subscriptions/Residential.jsx
 import useNavigateToSection from "../../components/Functions";
 import useScrollToHash from "../../hooks/useScrollToHash";
+=======
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import authFetch from "../../utils/authFetch";
+>>>>>>> 7b1228d7eb07552a0d84fa1a5c58e1f2855f22e2:my-project/src/pages/Subscriptions/Residential.jsx
 
 export default function Residential({ locData = {}, subsOptions = {} }) {
   useScrollToHash();
@@ -36,7 +41,11 @@ export default function Residential({ locData = {}, subsOptions = {} }) {
   useEffect(() => {
     async function loadPlans() {
       try {
+<<<<<<< HEAD:frontend/my-project/src/pages/Subscriptions/Residential.jsx
         const resp = await fetch("https://localhost:44325/plans/type/2", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+=======
+        const resp = await fetch("https://localhost:44325/plans/type/2"); // public endpoint, keep as fetch
+>>>>>>> 7b1228d7eb07552a0d84fa1a5c58e1f2855f22e2:my-project/src/pages/Subscriptions/Residential.jsx
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         setPlans(await resp.json());
       } catch (err) {

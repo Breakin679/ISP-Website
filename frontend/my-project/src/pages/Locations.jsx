@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import RequestInstallationModal from "../components/Installation";
 import { FaHome, FaBuilding, FaNetworkWired } from "react-icons/fa";
+<<<<<<< HEAD:frontend/my-project/src/pages/Locations.jsx
 import Fuse from "fuse.js";
 
 import useNavigateToSection from "../components/Functions";
 
 export default function Locations() {
   const navigateToSection = useNavigateToSection();
+=======
+import authFetch from "../utils/authFetch";
+>>>>>>> 7b1228d7eb07552a0d84fa1a5c58e1f2855f22e2:my-project/src/pages/Locations.jsx
 
   const [modalOpen, setModalOpen] = useState(false);
   const [installType, setInstallType] = useState("");
